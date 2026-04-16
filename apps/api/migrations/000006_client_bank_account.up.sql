@@ -4,4 +4,5 @@
 ALTER TABLE clients
     ADD COLUMN IF NOT EXISTS bank_name           VARCHAR(100),
     ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(50),
-    ADD COLUMN IF NOT EXISTS bank_account_name   VARCHAR(200);
+    ADD COLUMN IF NOT EXISTS bank_account_name   VARCHAR(200),
+    ADD COLUMN IF NOT EXISTS address             VARCHAR(500);

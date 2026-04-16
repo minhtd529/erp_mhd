@@ -29,18 +29,24 @@ func (r *Repo) Create(ctx context.Context, p domain.CreateClientParams) (*domain
 	const q = `
 		INSERT INTO clients (tax_code, business_name, english_name, industry, office_id,
 		                     sales_owner_id, referrer_id,
+		                     address,
 		                     bank_name, bank_account_number, bank_account_name,
+		                     representative_name, representative_title, representative_phone,
 		                     created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15)
 		RETURNING id, tax_code, business_name, english_name, industry, status, office_id,
 		          sales_owner_id, referrer_id,
+		          address,
 		          bank_name, bank_account_number, bank_account_name,
+		          representative_name, representative_title, representative_phone,
 		          is_deleted, created_at, updated_at, created_by, updated_by`
 
 	row := r.pool.QueryRow(ctx, q,
 		p.TaxCode, p.BusinessName, p.EnglishName, p.Industry, p.OfficeID,
 		p.SalesOwnerID, p.ReferrerID,
+		p.Address,
 		p.BankName, p.BankAccountNumber, p.BankAccountName,
+		p.RepresentativeName, p.RepresentativeTitle, p.RepresentativePhone,
 		p.CreatedBy,
 	)
 	c, err := scanClient(row)
@@ -59,7 +65,9 @@ func (r *Repo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Client, erro
 	const q = `
 		SELECT id, tax_code, business_name, english_name, industry, status, office_id,
 		       sales_owner_id, referrer_id,
+		       address,
 		       bank_name, bank_account_number, bank_account_name,
+		       representative_name, representative_title, representative_phone,
 		       is_deleted, created_at, updated_at, created_by, updated_by
 		FROM clients WHERE id = $1 AND is_deleted = false`
 
@@ -83,21 +91,29 @@ func (r *Repo) Update(ctx context.Context, p domain.UpdateClientParams) (*domain
 		    office_id            = $5,
 		    sales_owner_id       = $6,
 		    referrer_id          = $7,
-		    bank_name            = $8,
-		    bank_account_number  = $9,
-		    bank_account_name    = $10,
-		    updated_by           = $11,
+		    address              = $8,
+		    bank_name            = $9,
+		    bank_account_number  = $10,
+		    bank_account_name    = $11,
+		    representative_name  = $12,
+		    representative_title = $13,
+		    representative_phone = $14,
+		    updated_by           = $15,
 		    updated_at           = NOW()
 		WHERE id = $1 AND is_deleted = false
 		RETURNING id, tax_code, business_name, english_name, industry, status, office_id,
 		          sales_owner_id, referrer_id,
+		          address,
 		          bank_name, bank_account_number, bank_account_name,
+		          representative_name, representative_title, representative_phone,
 		          is_deleted, created_at, updated_at, created_by, updated_by`
 
 	c, err := scanClient(r.pool.QueryRow(ctx, q,
 		p.ID, p.BusinessName, p.EnglishName, p.Industry, p.OfficeID,
 		p.SalesOwnerID, p.ReferrerID,
+		p.Address,
 		p.BankName, p.BankAccountNumber, p.BankAccountName,
+		p.RepresentativeName, p.RepresentativeTitle, p.RepresentativePhone,
 		p.UpdatedBy,
 	))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -157,7 +173,9 @@ func (r *Repo) List(ctx context.Context, f domain.ListClientsFilter) ([]*domain.
 	dataQ := fmt.Sprintf(`
 		SELECT id, tax_code, business_name, english_name, industry, status, office_id,
 		       sales_owner_id, referrer_id,
+		       address,
 		       bank_name, bank_account_number, bank_account_name,
+		       representative_name, representative_title, representative_phone,
 		       is_deleted, created_at, updated_at, created_by, updated_by
 		FROM clients %s
 		ORDER BY created_at DESC
@@ -194,7 +212,9 @@ func scanClient(row scanner) (*domain.Client, error) {
 	err := row.Scan(
 		&c.ID, &c.TaxCode, &c.BusinessName, &c.EnglishName, &c.Industry,
 		&c.Status, &c.OfficeID, &c.SalesOwnerID, &c.ReferrerID,
+		&c.Address,
 		&c.BankName, &c.BankAccountNumber, &c.BankAccountName,
+		&c.RepresentativeName, &c.RepresentativeTitle, &c.RepresentativePhone,
 		&c.IsDeleted, &c.CreatedAt, &c.UpdatedAt, &c.CreatedBy, &c.UpdatedBy,
 	)
 	if err != nil {

@@ -24,17 +24,21 @@ func NewClientUseCase(repo domain.ClientRepository, auditLog *audit.Logger) *Cli
 // Create creates a new client in PROSPECT status.
 func (uc *ClientUseCase) Create(ctx context.Context, req ClientCreateRequest, callerID *uuid.UUID, ip string) (*ClientResponse, error) {
 	c, err := uc.repo.Create(ctx, domain.CreateClientParams{
-		TaxCode:           req.TaxCode,
-		BusinessName:      req.BusinessName,
-		EnglishName:       req.EnglishName,
-		Industry:          req.Industry,
-		OfficeID:          req.OfficeID,
-		SalesOwnerID:      req.SalesOwnerID,
-		ReferrerID:        req.ReferrerID,
-		BankName:          req.BankName,
-		BankAccountNumber: req.BankAccountNumber,
-		BankAccountName:   req.BankAccountName,
-		CreatedBy:         callerID,
+		TaxCode:             req.TaxCode,
+		BusinessName:        req.BusinessName,
+		EnglishName:         req.EnglishName,
+		Industry:            req.Industry,
+		OfficeID:            req.OfficeID,
+		SalesOwnerID:        req.SalesOwnerID,
+		ReferrerID:          req.ReferrerID,
+		Address:             req.Address,
+		BankName:            req.BankName,
+		BankAccountNumber:   req.BankAccountNumber,
+		BankAccountName:     req.BankAccountName,
+		RepresentativeName:  req.RepresentativeName,
+		RepresentativeTitle: req.RepresentativeTitle,
+		RepresentativePhone: req.RepresentativePhone,
+		CreatedBy:           callerID,
 	})
 	if err != nil {
 		return nil, err
@@ -66,17 +70,21 @@ func (uc *ClientUseCase) GetByID(ctx context.Context, id uuid.UUID) (*ClientResp
 // Update mutates allowed fields on an existing client.
 func (uc *ClientUseCase) Update(ctx context.Context, id uuid.UUID, req ClientUpdateRequest, callerID *uuid.UUID, ip string) (*ClientResponse, error) {
 	c, err := uc.repo.Update(ctx, domain.UpdateClientParams{
-		ID:                id,
-		BusinessName:      req.BusinessName,
-		EnglishName:       req.EnglishName,
-		Industry:          req.Industry,
-		OfficeID:          req.OfficeID,
-		SalesOwnerID:      req.SalesOwnerID,
-		ReferrerID:        req.ReferrerID,
-		BankName:          req.BankName,
-		BankAccountNumber: req.BankAccountNumber,
-		BankAccountName:   req.BankAccountName,
-		UpdatedBy:         callerID,
+		ID:                  id,
+		BusinessName:        req.BusinessName,
+		EnglishName:         req.EnglishName,
+		Industry:            req.Industry,
+		OfficeID:            req.OfficeID,
+		SalesOwnerID:        req.SalesOwnerID,
+		ReferrerID:          req.ReferrerID,
+		Address:             req.Address,
+		BankName:            req.BankName,
+		BankAccountNumber:   req.BankAccountNumber,
+		BankAccountName:     req.BankAccountName,
+		RepresentativeName:  req.RepresentativeName,
+		RepresentativeTitle: req.RepresentativeTitle,
+		RepresentativePhone: req.RepresentativePhone,
+		UpdatedBy:           callerID,
 	})
 	if err != nil {
 		return nil, err

@@ -1,5 +1,5 @@
-<!-- spec-version: 1.2 | last-sync: 2026-04-16 | changes: renamed title, added sales_owner/referrer fields, Commission sub-module -->
-> **Spec version**: 1.2 — Last sync: 2026-04-16 — Updated in v1.2
+<!-- spec-version: 1.3 | last-sync: 2026-04-16 | changes: added address, bank account, representative, client_contacts fields -->
+> **Spec version**: 1.3 — Last sync: 2026-04-16 — Updated in v1.3
 
 # Module 1: CRM – Customer Relationship Management & Commission
 
@@ -23,7 +23,10 @@ Manages client information, risk assessments, conflict checks, sales owner track
 - Tax code (10 or 13-14 digits, unique)
 - Business name, English name
 - Industry classification, business type
-- Primary/secondary contact persons
+- Address (full address text)
+- Primary/secondary contact persons (table `client_contacts`)
+- Legal representative: name, title, phone
+- Bank account: bank name, account number, account holder name
 - Office assignment (multi-office support)
 - Status: `PROSPECT` → `ASSESSMENT` → `ACCEPTED` → `INACTIVE`
 
@@ -89,7 +92,17 @@ modules/crm/
 | PUT | `/api/v1/clients/{id}` | Update client | FIRM_PARTNER | UPDATE |
 | DELETE | `/api/v1/clients/{id}` | Soft delete (is_deleted=true) | FIRM_PARTNER | DELETE |
 
-**Fields** (snake_case): `id`, `tax_code`, `business_name`, `english_name`, `industry`, `status`, `office_id`, `sales_owner_id`, `referrer_id`, `assigned_partner_id`, `created_at`, `created_by`, `updated_at`, `updated_by`, `is_deleted`
+**Fields** (snake_case): `id`, `tax_code`, `business_name`, `english_name`, `industry`, `status`, `office_id`, `sales_owner_id`, `referrer_id`, `assigned_partner_id`, `address`, `bank_name`, `bank_account_number`, `bank_account_name`, `representative_name`, `representative_title`, `representative_phone`, `created_at`, `created_by`, `updated_at`, `updated_by`, `is_deleted`
+
+### Client Contacts (Người liên hệ đầu mối)
+| Method | Path | Description | Auth | Audit |
+|--------|------|-------------|------|-------|
+| GET | `/api/v1/clients/{id}/contacts` | List contacts (primary first) | AUDIT_MANAGER | No |
+| POST | `/api/v1/clients/{id}/contacts` | Add contact | FIRM_PARTNER | CREATE |
+| PUT | `/api/v1/clients/{id}/contacts/{cid}` | Update contact | FIRM_PARTNER | UPDATE |
+| DELETE | `/api/v1/clients/{id}/contacts/{cid}` | Soft delete contact | FIRM_PARTNER | DELETE |
+
+**Fields**: `id`, `client_id`, `full_name`, `title`, `phone`, `email`, `is_primary`, `created_at`, `created_by`, `updated_at`, `updated_by`
 
 ### Risk Assessment
 | Method | Path | Description | Auth | Audit |
@@ -118,8 +131,8 @@ modules/crm/
 ## Database Tables
 
 ### Core Tables
-- `clients` (id UUID, tax_code VARCHAR(14) unique, business_name, english_name, industry, status ENUM, office_id, sales_owner_id UUID REFERENCES employees(id), referrer_id UUID REFERENCES employees(id), assigned_partner_id UUID REFERENCES employees(id), created_at, created_by, updated_at, updated_by, is_deleted)
-- `client_contacts` (id, client_id, first_name, last_name, title, phone, email, type ENUM (PRIMARY|SECONDARY), created_at)
+- `clients` (id UUID, tax_code VARCHAR(14) unique, business_name VARCHAR(200), english_name VARCHAR(200), industry VARCHAR(100), status ENUM, office_id UUID, sales_owner_id UUID REFERENCES users(id), referrer_id UUID REFERENCES users(id), assigned_partner_id UUID REFERENCES users(id), address VARCHAR(500), bank_name VARCHAR(100), bank_account_number VARCHAR(50), bank_account_name VARCHAR(200), representative_name VARCHAR(200), representative_title VARCHAR(100), representative_phone VARCHAR(20), created_at, created_by, updated_at, updated_by, is_deleted)
+- `client_contacts` (id UUID, client_id UUID REFERENCES clients(id), full_name VARCHAR(200), title VARCHAR(100), phone VARCHAR(20), email VARCHAR(255), is_primary BOOLEAN DEFAULT false, is_deleted BOOLEAN DEFAULT false, created_at, created_by, updated_at, updated_by)
 - `risk_assessments` (id, client_id, risk_level ENUM, score INT, criteria_scores JSONB, status ENUM, assessor_id, created_at)
 - `conflict_checks` (id, client_id, status ENUM, related_parties JSONB, findings TEXT, checked_by, checked_at, approved_by, approved_at)
 
@@ -184,6 +197,7 @@ modules/crm/
 ## Error Codes
 `CLIENT_NOT_FOUND`
 `DUPLICATE_TAX_CODE`
+`CONTACT_NOT_FOUND`
 `RISK_ASSESSMENT_REQUIRED`
 `CONFLICT_FOUND_CANNOT_ACCEPT`
 `INVALID_STATE_TRANSITION`
