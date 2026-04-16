@@ -33,7 +33,7 @@ func (uc *ContactUseCase) ListByClient(ctx context.Context, clientID uuid.UUID) 
 }
 
 // Create adds a new contact to a client.
-func (uc *ContactUseCase) Create(ctx context.Context, clientID uuid.UUID, req ContactCreateRequest, callerID *uuid.UUID, ip string) (*ContactResponse, error) {
+func (uc *ContactUseCase) Create(ctx context.Context, clientID uuid.UUID, req ContactCreateRequest, callerID uuid.UUID, ip string) (*ContactResponse, error) {
 	cc, err := uc.repo.Create(ctx, domain.CreateContactParams{
 		ClientID:  clientID,
 		FullName:  req.FullName,
@@ -48,7 +48,7 @@ func (uc *ContactUseCase) Create(ctx context.Context, clientID uuid.UUID, req Co
 	}
 
 	_ = uc.auditLog.Log(ctx, audit.Entry{
-		UserID:     callerID,
+		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "client_contacts",
 		ResourceID: &cc.ID,
@@ -61,7 +61,7 @@ func (uc *ContactUseCase) Create(ctx context.Context, clientID uuid.UUID, req Co
 }
 
 // Update mutates an existing contact.
-func (uc *ContactUseCase) Update(ctx context.Context, clientID, contactID uuid.UUID, req ContactUpdateRequest, callerID *uuid.UUID, ip string) (*ContactResponse, error) {
+func (uc *ContactUseCase) Update(ctx context.Context, clientID, contactID uuid.UUID, req ContactUpdateRequest, callerID uuid.UUID, ip string) (*ContactResponse, error) {
 	cc, err := uc.repo.Update(ctx, domain.UpdateContactParams{
 		ID:        contactID,
 		ClientID:  clientID,
@@ -77,7 +77,7 @@ func (uc *ContactUseCase) Update(ctx context.Context, clientID, contactID uuid.U
 	}
 
 	_ = uc.auditLog.Log(ctx, audit.Entry{
-		UserID:     callerID,
+		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "client_contacts",
 		ResourceID: &contactID,
@@ -90,13 +90,13 @@ func (uc *ContactUseCase) Update(ctx context.Context, clientID, contactID uuid.U
 }
 
 // Delete soft-deletes a contact.
-func (uc *ContactUseCase) Delete(ctx context.Context, clientID, contactID uuid.UUID, callerID *uuid.UUID, ip string) error {
+func (uc *ContactUseCase) Delete(ctx context.Context, clientID, contactID uuid.UUID, callerID uuid.UUID, ip string) error {
 	if err := uc.repo.SoftDelete(ctx, contactID, clientID, callerID); err != nil {
 		return err
 	}
 
 	_ = uc.auditLog.Log(ctx, audit.Entry{
-		UserID:     callerID,
+		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "client_contacts",
 		ResourceID: &contactID,

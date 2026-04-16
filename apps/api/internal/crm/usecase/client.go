@@ -22,7 +22,7 @@ func NewClientUseCase(repo domain.ClientRepository, auditLog *audit.Logger) *Cli
 }
 
 // Create creates a new client in PROSPECT status.
-func (uc *ClientUseCase) Create(ctx context.Context, req ClientCreateRequest, callerID *uuid.UUID, ip string) (*ClientResponse, error) {
+func (uc *ClientUseCase) Create(ctx context.Context, req ClientCreateRequest, callerID uuid.UUID, ip string) (*ClientResponse, error) {
 	c, err := uc.repo.Create(ctx, domain.CreateClientParams{
 		TaxCode:             req.TaxCode,
 		BusinessName:        req.BusinessName,
@@ -45,7 +45,7 @@ func (uc *ClientUseCase) Create(ctx context.Context, req ClientCreateRequest, ca
 	}
 
 	_ = uc.auditLog.Log(ctx, audit.Entry{
-		UserID:     callerID,
+		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "clients",
 		ResourceID: &c.ID,
@@ -68,7 +68,7 @@ func (uc *ClientUseCase) GetByID(ctx context.Context, id uuid.UUID) (*ClientResp
 }
 
 // Update mutates allowed fields on an existing client.
-func (uc *ClientUseCase) Update(ctx context.Context, id uuid.UUID, req ClientUpdateRequest, callerID *uuid.UUID, ip string) (*ClientResponse, error) {
+func (uc *ClientUseCase) Update(ctx context.Context, id uuid.UUID, req ClientUpdateRequest, callerID uuid.UUID, ip string) (*ClientResponse, error) {
 	c, err := uc.repo.Update(ctx, domain.UpdateClientParams{
 		ID:                  id,
 		BusinessName:        req.BusinessName,
@@ -91,7 +91,7 @@ func (uc *ClientUseCase) Update(ctx context.Context, id uuid.UUID, req ClientUpd
 	}
 
 	_ = uc.auditLog.Log(ctx, audit.Entry{
-		UserID:     callerID,
+		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "clients",
 		ResourceID: &id,
@@ -104,13 +104,13 @@ func (uc *ClientUseCase) Update(ctx context.Context, id uuid.UUID, req ClientUpd
 }
 
 // Delete soft-deletes a client.
-func (uc *ClientUseCase) Delete(ctx context.Context, id uuid.UUID, callerID *uuid.UUID, ip string) error {
+func (uc *ClientUseCase) Delete(ctx context.Context, id uuid.UUID, callerID uuid.UUID, ip string) error {
 	if err := uc.repo.SoftDelete(ctx, id, callerID); err != nil {
 		return err
 	}
 
 	_ = uc.auditLog.Log(ctx, audit.Entry{
-		UserID:     callerID,
+		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "clients",
 		ResourceID: &id,

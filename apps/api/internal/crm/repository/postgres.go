@@ -212,7 +212,7 @@ func scanClient(row scanner) (*domain.Client, error) {
 	err := row.Scan(
 		&c.ID, &c.TaxCode, &c.BusinessName, &c.EnglishName, &c.Industry,
 		&c.Status, &c.OfficeID, &c.SalesOwnerID, &c.ReferrerID,
-		&c.Address,
+		&c.Address, // NOT NULL — scans directly into string
 		&c.BankName, &c.BankAccountNumber, &c.BankAccountName,
 		&c.RepresentativeName, &c.RepresentativeTitle, &c.RepresentativePhone,
 		&c.IsDeleted, &c.CreatedAt, &c.UpdatedAt, &c.CreatedBy, &c.UpdatedBy,

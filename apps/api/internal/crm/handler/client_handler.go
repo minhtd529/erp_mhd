@@ -46,13 +46,17 @@ func (h *ClientHandler) List(c *gin.Context) {
 
 // Create handles POST /api/v1/clients.
 func (h *ClientHandler) Create(c *gin.Context) {
+	caller, ok := mustCallerID(c)
+	if !ok {
+		return
+	}
 	var req usecase.ClientCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errResp("VALIDATION_ERROR", err.Error()))
 		return
 	}
 
-	resp, err := h.uc.Create(c.Request.Context(), req, callerID(c), c.ClientIP())
+	resp, err := h.uc.Create(c.Request.Context(), req, caller, c.ClientIP())
 	if err != nil {
 		h.handleErr(c, err)
 		return
@@ -78,6 +82,10 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 
 // Update handles PUT /api/v1/clients/:id.
 func (h *ClientHandler) Update(c *gin.Context) {
+	caller, ok := mustCallerID(c)
+	if !ok {
+		return
+	}
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid client ID"))
@@ -90,7 +98,7 @@ func (h *ClientHandler) Update(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.uc.Update(c.Request.Context(), id, req, callerID(c), c.ClientIP())
+	resp, err := h.uc.Update(c.Request.Context(), id, req, caller, c.ClientIP())
 	if err != nil {
 		h.handleErr(c, err)
 		return
@@ -100,13 +108,17 @@ func (h *ClientHandler) Update(c *gin.Context) {
 
 // Delete handles DELETE /api/v1/clients/:id.
 func (h *ClientHandler) Delete(c *gin.Context) {
+	caller, ok := mustCallerID(c)
+	if !ok {
+		return
+	}
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid client ID"))
 		return
 	}
 
-	if err := h.uc.Delete(c.Request.Context(), id, callerID(c), c.ClientIP()); err != nil {
+	if err := h.uc.Delete(c.Request.Context(), id, caller, c.ClientIP()); err != nil {
 		h.handleErr(c, err)
 		return
 	}
@@ -142,4 +154,14 @@ func callerID(c *gin.Context) *uuid.UUID {
 		return nil
 	}
 	return &id
+}
+
+// mustCallerID returns the authenticated user ID or writes 401 and returns false.
+func mustCallerID(c *gin.Context) (uuid.UUID, bool) {
+	id := callerID(c)
+	if id == nil {
+		c.JSON(http.StatusUnauthorized, errResp("UNAUTHORIZED", "Authentication required"))
+		return uuid.UUID{}, false
+	}
+	return *id, true
 }

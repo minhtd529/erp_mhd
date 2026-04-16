@@ -13,10 +13,10 @@ type ClientCreateRequest struct {
 	BusinessName        string     `json:"business_name"        binding:"required"`
 	EnglishName         *string    `json:"english_name"`
 	Industry            *string    `json:"industry"`
-	OfficeID            *uuid.UUID `json:"office_id"`
+	OfficeID            uuid.UUID  `json:"office_id"            binding:"required"`
 	SalesOwnerID        *uuid.UUID `json:"sales_owner_id"`
 	ReferrerID          *uuid.UUID `json:"referrer_id"`
-	Address             *string    `json:"address"`
+	Address             string     `json:"address"              binding:"required"`
 	BankName            *string    `json:"bank_name"`
 	BankAccountNumber   *string    `json:"bank_account_number"`
 	BankAccountName     *string    `json:"bank_account_name"`
@@ -30,10 +30,10 @@ type ClientUpdateRequest struct {
 	BusinessName        string     `json:"business_name"        binding:"required"`
 	EnglishName         *string    `json:"english_name"`
 	Industry            *string    `json:"industry"`
-	OfficeID            *uuid.UUID `json:"office_id"`
+	OfficeID            uuid.UUID  `json:"office_id"            binding:"required"`
 	SalesOwnerID        *uuid.UUID `json:"sales_owner_id"`
 	ReferrerID          *uuid.UUID `json:"referrer_id"`
-	Address             *string    `json:"address"`
+	Address             string     `json:"address"              binding:"required"`
 	BankName            *string    `json:"bank_name"`
 	BankAccountNumber   *string    `json:"bank_account_number"`
 	BankAccountName     *string    `json:"bank_account_name"`
@@ -58,10 +58,10 @@ type ClientResponse struct {
 	EnglishName         *string             `json:"english_name"`
 	Industry            *string             `json:"industry"`
 	Status              domain.ClientStatus `json:"status"`
-	OfficeID            *uuid.UUID          `json:"office_id"`
+	OfficeID            uuid.UUID           `json:"office_id"`
 	SalesOwnerID        *uuid.UUID          `json:"sales_owner_id"`
 	ReferrerID          *uuid.UUID          `json:"referrer_id"`
-	Address             *string             `json:"address"`
+	Address             string              `json:"address"`
 	BankName            *string             `json:"bank_name"`
 	BankAccountNumber   *string             `json:"bank_account_number"`
 	BankAccountName     *string             `json:"bank_account_name"`
@@ -70,8 +70,8 @@ type ClientResponse struct {
 	RepresentativePhone *string             `json:"representative_phone"`
 	CreatedAt           time.Time           `json:"created_at"`
 	UpdatedAt           time.Time           `json:"updated_at"`
-	CreatedBy           *uuid.UUID          `json:"created_by"`
-	UpdatedBy           *uuid.UUID          `json:"updated_by"`
+	CreatedBy           uuid.UUID           `json:"created_by"`
+	UpdatedBy           uuid.UUID           `json:"updated_by"`
 }
 
 // ContactCreateRequest is the body for POST /api/v1/clients/:id/contacts.
@@ -100,11 +100,11 @@ type ContactResponse struct {
 	Title     *string    `json:"title"`
 	Phone     *string    `json:"phone"`
 	Email     *string    `json:"email"`
-	IsPrimary bool       `json:"is_primary"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	CreatedBy *uuid.UUID `json:"created_by"`
-	UpdatedBy *uuid.UUID `json:"updated_by"`
+	IsPrimary bool      `json:"is_primary"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	CreatedBy uuid.UUID `json:"created_by"`
+	UpdatedBy uuid.UUID `json:"updated_by"`
 }
 
 // PaginatedResult is a generic paginated wrapper (local copy to avoid import cycle).

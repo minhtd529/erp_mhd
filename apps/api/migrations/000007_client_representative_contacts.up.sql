@@ -23,3 +23,6 @@ CREATE TABLE client_contacts (
 );
 
 CREATE INDEX idx_client_contacts_client_id ON client_contacts(client_id) WHERE is_deleted = false;
+
+ALTER TABLE client_contacts ALTER COLUMN created_by SET NOT NULL;
+ALTER TABLE client_contacts ALTER COLUMN updated_by SET NOT NULL;

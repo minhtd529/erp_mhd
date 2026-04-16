@@ -38,6 +38,10 @@ func (h *ContactHandler) List(c *gin.Context) {
 
 // Create handles POST /api/v1/clients/:id/contacts.
 func (h *ContactHandler) Create(c *gin.Context) {
+	caller, ok := mustCallerID(c)
+	if !ok {
+		return
+	}
 	clientID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid client ID"))
@@ -50,7 +54,7 @@ func (h *ContactHandler) Create(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.uc.Create(c.Request.Context(), clientID, req, callerID(c), c.ClientIP())
+	resp, err := h.uc.Create(c.Request.Context(), clientID, req, caller, c.ClientIP())
 	if err != nil {
 		h.handleErr(c, err)
 		return
@@ -60,6 +64,10 @@ func (h *ContactHandler) Create(c *gin.Context) {
 
 // Update handles PUT /api/v1/clients/:id/contacts/:cid.
 func (h *ContactHandler) Update(c *gin.Context) {
+	caller, ok := mustCallerID(c)
+	if !ok {
+		return
+	}
 	clientID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid client ID"))
@@ -77,7 +85,7 @@ func (h *ContactHandler) Update(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.uc.Update(c.Request.Context(), clientID, contactID, req, callerID(c), c.ClientIP())
+	resp, err := h.uc.Update(c.Request.Context(), clientID, contactID, req, caller, c.ClientIP())
 	if err != nil {
 		h.handleErr(c, err)
 		return
@@ -87,6 +95,10 @@ func (h *ContactHandler) Update(c *gin.Context) {
 
 // Delete handles DELETE /api/v1/clients/:id/contacts/:cid.
 func (h *ContactHandler) Delete(c *gin.Context) {
+	caller, ok := mustCallerID(c)
+	if !ok {
+		return
+	}
 	clientID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid client ID"))
@@ -98,7 +110,7 @@ func (h *ContactHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.uc.Delete(c.Request.Context(), clientID, contactID, callerID(c), c.ClientIP()); err != nil {
+	if err := h.uc.Delete(c.Request.Context(), clientID, contactID, caller, c.ClientIP()); err != nil {
 		h.handleErr(c, err)
 		return
 	}

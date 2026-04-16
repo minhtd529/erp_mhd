@@ -24,10 +24,10 @@ type Client struct {
 	EnglishName         *string      `json:"english_name"          db:"english_name"`
 	Industry            *string      `json:"industry"              db:"industry"`
 	Status              ClientStatus `json:"status"                db:"status"`
-	OfficeID            *uuid.UUID   `json:"office_id"             db:"office_id"`
+	OfficeID            uuid.UUID    `json:"office_id"             db:"office_id"`
 	SalesOwnerID        *uuid.UUID   `json:"sales_owner_id"        db:"sales_owner_id"`
 	ReferrerID          *uuid.UUID   `json:"referrer_id"           db:"referrer_id"`
-	Address             *string      `json:"address"               db:"address"`
+	Address             string       `json:"address"               db:"address"`
 	BankName            *string      `json:"bank_name"             db:"bank_name"`
 	BankAccountNumber   *string      `json:"bank_account_number"   db:"bank_account_number"`
 	BankAccountName     *string      `json:"bank_account_name"     db:"bank_account_name"`
@@ -37,8 +37,8 @@ type Client struct {
 	IsDeleted           bool         `json:"is_deleted"            db:"is_deleted"`
 	CreatedAt           time.Time    `json:"created_at"            db:"created_at"`
 	UpdatedAt           time.Time    `json:"updated_at"            db:"updated_at"`
-	CreatedBy           *uuid.UUID   `json:"created_by"            db:"created_by"`
-	UpdatedBy           *uuid.UUID   `json:"updated_by"            db:"updated_by"`
+	CreatedBy           uuid.UUID    `json:"created_by"            db:"created_by"`
+	UpdatedBy           uuid.UUID    `json:"updated_by"            db:"updated_by"`
 }
 
 // ClientContact is an external contact person for a client.
@@ -53,8 +53,8 @@ type ClientContact struct {
 	IsDeleted bool       `json:"is_deleted" db:"is_deleted"`
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
-	CreatedBy *uuid.UUID `json:"created_by" db:"created_by"`
-	UpdatedBy *uuid.UUID `json:"updated_by" db:"updated_by"`
+	CreatedBy uuid.UUID  `json:"created_by" db:"created_by"`
+	UpdatedBy uuid.UUID  `json:"updated_by" db:"updated_by"`
 }
 
 // CreateContactParams holds parameters for creating a client contact.
@@ -65,7 +65,7 @@ type CreateContactParams struct {
 	Phone     *string
 	Email     *string
 	IsPrimary bool
-	CreatedBy *uuid.UUID
+	CreatedBy uuid.UUID
 }
 
 // UpdateContactParams holds parameters for updating a client contact.
@@ -77,7 +77,7 @@ type UpdateContactParams struct {
 	Phone     *string
 	Email     *string
 	IsPrimary bool
-	UpdatedBy *uuid.UUID
+	UpdatedBy uuid.UUID
 }
 
 // CreateClientParams holds the parameters needed to create a new client.
@@ -86,17 +86,17 @@ type CreateClientParams struct {
 	BusinessName        string
 	EnglishName         *string
 	Industry            *string
-	OfficeID            *uuid.UUID
+	OfficeID            uuid.UUID
 	SalesOwnerID        *uuid.UUID
 	ReferrerID          *uuid.UUID
-	Address             *string
+	Address             string
 	BankName            *string
 	BankAccountNumber   *string
 	BankAccountName     *string
 	RepresentativeName  *string
 	RepresentativeTitle *string
 	RepresentativePhone *string
-	CreatedBy           *uuid.UUID
+	CreatedBy           uuid.UUID
 }
 
 // UpdateClientParams holds the fields that can be changed after creation.
@@ -105,17 +105,17 @@ type UpdateClientParams struct {
 	BusinessName        string
 	EnglishName         *string
 	Industry            *string
-	OfficeID            *uuid.UUID
+	OfficeID            uuid.UUID
 	SalesOwnerID        *uuid.UUID
 	ReferrerID          *uuid.UUID
-	Address             *string
+	Address             string
 	BankName            *string
 	BankAccountNumber   *string
 	BankAccountName     *string
 	RepresentativeName  *string
 	RepresentativeTitle *string
 	RepresentativePhone *string
-	UpdatedBy           *uuid.UUID
+	UpdatedBy           uuid.UUID
 }
 
 // ListClientsFilter controls pagination and filtering for the list query.
