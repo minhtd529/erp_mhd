@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build *)",
+      "Bash(go test *)",
+      "Bash(grep -c \"--- PASS\")",
+      "Bash(go vet *)",
+      "Bash(grep -n \"JWTIssuer\\\\|interface\\\\|ValidateAccessToken\" pkg/auth/*.go)",
+      "Bash(grep -n \"JWTIssuer\\\\|type.*interface\" pkg/auth/*.go internal/global/auth/domain/*.go)"
+    ]
+  }
+}

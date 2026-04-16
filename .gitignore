@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Go
+apps/api/bin/
+apps/api/*.exe
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker volumes
+.docker/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+*.out
+
+# Turbo cache
+.turbo/
+
+# MinIO data
+minio-data/
+
+# Temp
+tmp/
