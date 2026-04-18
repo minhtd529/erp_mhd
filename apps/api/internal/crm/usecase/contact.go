@@ -91,7 +91,7 @@ func (uc *ContactUseCase) Update(ctx context.Context, clientID, contactID uuid.U
 
 // Delete soft-deletes a contact.
 func (uc *ContactUseCase) Delete(ctx context.Context, clientID, contactID uuid.UUID, callerID uuid.UUID, ip string) error {
-	if err := uc.repo.SoftDelete(ctx, contactID, clientID, callerID); err != nil {
+	if err := uc.repo.SoftDelete(ctx, contactID, clientID, &callerID); err != nil {
 		return err
 	}
 

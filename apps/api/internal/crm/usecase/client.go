@@ -105,7 +105,7 @@ func (uc *ClientUseCase) Update(ctx context.Context, id uuid.UUID, req ClientUpd
 
 // Delete soft-deletes a client.
 func (uc *ClientUseCase) Delete(ctx context.Context, id uuid.UUID, callerID uuid.UUID, ip string) error {
-	if err := uc.repo.SoftDelete(ctx, id, callerID); err != nil {
+	if err := uc.repo.SoftDelete(ctx, id, &callerID); err != nil {
 		return err
 	}
 

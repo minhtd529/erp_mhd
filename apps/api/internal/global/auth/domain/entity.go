@@ -44,17 +44,30 @@ type RefreshToken struct {
 // TwoFactorChallenge is an ephemeral record created when a user with 2FA enabled
 // attempts to log in. The challenge must be verified within ExpiresAt.
 type TwoFactorChallenge struct {
-	ID           uuid.UUID
-	UserID       uuid.UUID
-	ChallengeID  string // opaque UUID sent to client
-	Method       string // "totp" | "push"
-	IPAddress    string
-	AttemptCount int        // incremented on each wrong OTP; invalidated at MaxAttempts
-	ExpiresAt    time.Time
-	VerifiedAt   *time.Time
+	ID            uuid.UUID
+	UserID        uuid.UUID
+	ChallengeID   string // opaque UUID sent to client
+	Method        string // "totp" | "push"
+	IPAddress     string
+	AttemptCount  int        // incremented on each wrong OTP; invalidated at MaxAttempts
+	ExpiresAt     time.Time
+	VerifiedAt    *time.Time
 	InvalidatedAt *time.Time // set when attempt_count reaches max
+	// Push 2FA fields (populated only for method="push")
+	PushResponse *string    // "approved" | "rejected"
+	RespondedAt  *time.Time
 	CreatedAt    time.Time
 }
+
+// PushChallengeStatus represents the current state of a push 2FA challenge.
+type PushChallengeStatus string
+
+const (
+	PushChallengePending  PushChallengeStatus = "pending"
+	PushChallengeApproved PushChallengeStatus = "approved"
+	PushChallengeRejected PushChallengeStatus = "rejected"
+	PushChallengeExpired  PushChallengeStatus = "expired"
+)
 
 // BackupCode represents a one-time-use recovery code.
 type BackupCode struct {

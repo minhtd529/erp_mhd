@@ -1,5 +1,7 @@
 package usecase
 
+import "github.com/mdh/erp-audit/api/pkg/pagination"
+
 // LoginRequest represents the login payload
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
@@ -16,26 +18,10 @@ type LoginResponse struct {
 	ChallengeType string `json:"challenge_type,omitempty"`
 }
 
-// PaginatedResult is the generic paginated list response
-type PaginatedResult[T any] struct {
-	Data       []T   `json:"data"`
-	Total      int64 `json:"total"`
-	Page       int   `json:"page"`
-	Size       int   `json:"size"`
-	TotalPages int   `json:"total_pages"`
-}
+// PaginatedResult is the shared offset pagination type.
+type PaginatedResult[T any] = pagination.OffsetResult[T]
 
-// NewPaginatedResult builds a PaginatedResult
+// NewPaginatedResult builds a PaginatedResult.
 func NewPaginatedResult[T any](data []T, total int64, page, size int) PaginatedResult[T] {
-	totalPages := int(total) / size
-	if int(total)%size != 0 {
-		totalPages++
-	}
-	return PaginatedResult[T]{
-		Data:       data,
-		Total:      total,
-		Page:       page,
-		Size:       size,
-		TotalPages: totalPages,
-	}
+	return pagination.NewOffsetResult(data, total, page, size)
 }

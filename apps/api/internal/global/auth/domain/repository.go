@@ -95,4 +95,8 @@ type TwoFARepository interface {
 	IncrementLoginAttempts(ctx context.Context, userID uuid.UUID) (int, error)
 	ResetLoginAttempts(ctx context.Context, userID uuid.UUID) error
 	LockAccount(ctx context.Context, userID uuid.UUID, until time.Time) error
+
+	// Push 2FA
+	RespondToPushChallenge(ctx context.Context, challengeID string, approved bool) error
+	FindPushChallenge(ctx context.Context, challengeID string) (*TwoFactorChallenge, error)
 }

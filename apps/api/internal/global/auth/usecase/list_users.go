@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mdh/erp-audit/api/internal/global/auth/domain"
 	"github.com/mdh/erp-audit/api/pkg/audit"
+	"github.com/mdh/erp-audit/api/pkg/pagination"
 )
 
 // UserListRequest holds validated query parameters for GET /api/v1/users.
@@ -107,17 +108,7 @@ func (uc *ListUsersUseCase) Execute(ctx context.Context, req UserListRequest) (P
 		}
 	}
 
-	tp := int(total) / req.Size
-	if int(total)%req.Size != 0 {
-		tp++
-	}
-	return PaginatedResult[UserSummaryResponse]{
-		Data:       items,
-		Total:      total,
-		Page:       req.Page,
-		Size:       req.Size,
-		TotalPages: tp,
-	}, nil
+	return pagination.NewOffsetResult(items, total, req.Page, req.Size), nil
 }
 
 // ─── UpdateUserUseCase ───────────────────────────────────────────────────────

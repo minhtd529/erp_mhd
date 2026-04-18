@@ -30,6 +30,45 @@ import (
 	hrmusecase "github.com/mdh/erp-audit/api/internal/hrm/usecase"
 
 	"github.com/mdh/erp-audit/api/pkg/ws"
+
+	enghandler "github.com/mdh/erp-audit/api/internal/engagement/handler"
+	engrepo "github.com/mdh/erp-audit/api/internal/engagement/repository"
+	engusecase "github.com/mdh/erp-audit/api/internal/engagement/usecase"
+
+	tshandler "github.com/mdh/erp-audit/api/internal/timesheet/handler"
+	tsrepo "github.com/mdh/erp-audit/api/internal/timesheet/repository"
+	tsusecase "github.com/mdh/erp-audit/api/internal/timesheet/usecase"
+
+	billinghandler "github.com/mdh/erp-audit/api/internal/billing/handler"
+	billingrepo "github.com/mdh/erp-audit/api/internal/billing/repository"
+	billingusecase "github.com/mdh/erp-audit/api/internal/billing/usecase"
+
+	wphandler "github.com/mdh/erp-audit/api/internal/workingpaper/handler"
+	wprepo "github.com/mdh/erp-audit/api/internal/workingpaper/repository"
+	wpusecase "github.com/mdh/erp-audit/api/internal/workingpaper/usecase"
+
+	commhandler "github.com/mdh/erp-audit/api/internal/commission/handler"
+	commrepo "github.com/mdh/erp-audit/api/internal/commission/repository"
+	commusecase "github.com/mdh/erp-audit/api/internal/commission/usecase"
+	commworker "github.com/mdh/erp-audit/api/internal/commission/worker"
+
+	taxhandler "github.com/mdh/erp-audit/api/internal/tax/handler"
+	taxrepo "github.com/mdh/erp-audit/api/internal/tax/repository"
+	taxusecase "github.com/mdh/erp-audit/api/internal/tax/usecase"
+	taxworker "github.com/mdh/erp-audit/api/internal/tax/worker"
+
+	"github.com/mdh/erp-audit/api/pkg/push"
+
+	reportinghandler "github.com/mdh/erp-audit/api/internal/reporting/handler"
+	reportingrepo "github.com/mdh/erp-audit/api/internal/reporting/repository"
+	reportingusecase "github.com/mdh/erp-audit/api/internal/reporting/usecase"
+	reportingworker "github.com/mdh/erp-audit/api/internal/reporting/worker"
+
+	"github.com/mdh/erp-audit/api/pkg/distlock"
+	"github.com/mdh/erp-audit/api/pkg/outbox"
+	"github.com/mdh/erp-audit/api/pkg/worker"
+	"github.com/hibiken/asynq"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -56,6 +95,23 @@ func main() {
 	if err := database.Migrate(cfg.Database.URL); err != nil {
 		l.Fatal("failed to run migrations", logger.Error(err))
 	}
+
+	// ── Redis ────────────────────────────────────────────────────────────────
+	redisOpts, err := redis.ParseURL(cfg.Redis.URL)
+	if err != nil {
+		l.Fatal("failed to parse Redis URL", logger.Error(err))
+	}
+	redisClient := redis.NewClient(redisOpts)
+	defer redisClient.Close()
+
+	locker := distlock.New(redisClient, 30*time.Second)
+	outboxPublisher := outbox.New(db.Pool)
+
+	// ── Asynq worker + outbox poller ─────────────────────────────────────────
+	asynqClient := asynq.NewClient(asynq.RedisClientOpt{Addr: cfg.Redis.URL})
+	defer asynqClient.Close()
+	outboxPoller := outbox.NewPoller(db.Pool, asynqClient, 5*time.Second, 50)
+	workerSrv := worker.New(worker.Config{RedisAddr: cfg.Redis.URL, Concurrency: 10})
 
 	// ── Shared services ───────────────────────────────────────────────────────
 	jwtSvc := pkgauth.NewJWTService(
@@ -100,16 +156,135 @@ func main() {
 	crmRepo := crmrepo.New(db.Pool)
 	clientUC := crmusecase.NewClientUseCase(crmRepo, auditLogger)
 	clientH := crmhandler.NewClientHandler(clientUC)
+	contactRepo := crmrepo.NewContactRepo(db.Pool)
+	contactUC := crmusecase.NewContactUseCase(contactRepo, auditLogger)
+	contactH := crmhandler.NewContactHandler(contactUC)
 
 	// ── HRM module ────────────────────────────────────────────────────────────
 	hrmRepo := hrmrepo.New(db.Pool)
 	employeeUC := hrmusecase.NewEmployeeUseCase(hrmRepo, auditLogger, cfg.HRM.BankEncryptionKey)
 	employeeH := hrmhandler.NewEmployeeHandler(employeeUC)
 
-	// ── WebSocket hub ─────────────────────────────────────────────────────────
+	// ── WebSocket hub (created early so use cases can broadcast) ─────────────
 	wsHub := ws.NewHub()
 	go wsHub.Run()
 	wsH := ws.NewHandler(wsHub, jwtSvc)
+
+	// ── Engagement module ─────────────────────────────────────────────────────
+	engRepo := engrepo.NewEngagementRepo(db.Pool)
+	memberRepo := engrepo.NewMemberRepo(db.Pool)
+	taskRepo := engrepo.NewTaskRepo(db.Pool)
+	costRepo := engrepo.NewCostRepo(db.Pool)
+	engagementUC := engusecase.NewEngagementUseCase(engRepo, auditLogger, wsHub)
+	teamUC := engusecase.NewTeamUseCase(memberRepo, engRepo, auditLogger)
+	taskUC := engusecase.NewTaskUseCase(taskRepo, engRepo, auditLogger)
+	costUC := engusecase.NewCostUseCase(costRepo, engRepo, auditLogger)
+	engH := enghandler.NewEngagementHandler(engagementUC)
+	teamH := enghandler.NewTeamHandler(teamUC)
+	taskH := enghandler.NewTaskHandler(taskUC)
+	costH := enghandler.NewCostHandler(costUC)
+
+	// ── Timesheet module ──────────────────────────────────────────────────────
+	timesheetRepo := tsrepo.NewTimesheetRepo(db.Pool)
+	entryRepo := tsrepo.NewEntryRepo(db.Pool)
+	attendanceRepo := tsrepo.NewAttendanceRepo(db.Pool)
+	timesheetUC := tsusecase.NewTimesheetUseCase(timesheetRepo, locker, auditLogger, outboxPublisher, wsHub)
+	entryUC := tsusecase.NewEntryUseCase(entryRepo, timesheetRepo, auditLogger)
+	attendanceUC := tsusecase.NewAttendanceUseCase(attendanceRepo, auditLogger)
+	tsH := tshandler.NewTimesheetHandler(timesheetUC)
+	entryH := tshandler.NewEntryHandler(entryUC)
+	attendanceH := tshandler.NewAttendanceHandler(attendanceUC)
+
+	// ── Billing module ────────────────────────────────────────────────────────
+	billingInvRepo := billingrepo.NewInvoiceRepo(db.Pool)
+	billingLineRepo := billingrepo.NewLineItemRepo(db.Pool)
+	billingPayRepo := billingrepo.NewPaymentRepo(db.Pool)
+	billingMemoRepo := billingrepo.NewMemoRepo(db.Pool)
+	billingARRepo := billingrepo.NewARRepo(db.Pool)
+	invoiceUC := billingusecase.NewInvoiceUseCase(billingInvRepo, billingLineRepo, auditLogger, outboxPublisher)
+	paymentUC := billingusecase.NewPaymentUseCase(billingPayRepo, billingInvRepo, auditLogger, outboxPublisher)
+	memoUC := billingusecase.NewMemoUseCase(billingMemoRepo, billingInvRepo, auditLogger, outboxPublisher)
+	arUC := billingusecase.NewARUseCase(billingARRepo)
+	engAdapter := billingusecase.NewEngagementAdapter(engRepo, memberRepo, costRepo)
+	tsEntryAdapter := billingusecase.NewTimesheetEntryAdapter(entryRepo)
+	generateUC := billingusecase.NewGenerateUseCase(billingInvRepo, billingLineRepo, engAdapter, tsEntryAdapter, auditLogger)
+	invoiceH := billinghandler.NewInvoiceHandler(invoiceUC, generateUC)
+	paymentH := billinghandler.NewPaymentHandler(paymentUC)
+	memoH := billinghandler.NewMemoHandler(memoUC)
+	arH := billinghandler.NewARHandler(arUC)
+	billingReportRepo := billingrepo.NewReportRepo(db.Pool)
+	reportUC := billingusecase.NewReportUseCase(billingReportRepo)
+	reportH := billinghandler.NewReportHandler(reportUC)
+
+	// ── Working Paper module ──────────────────────────────────────────────────
+	wpWPRepo := wprepo.NewWPRepo(db.Pool)
+	wpReviewRepo := wprepo.NewReviewRepo(db.Pool)
+	wpCommentRepo := wprepo.NewCommentRepo(db.Pool)
+	wpFolderRepo := wprepo.NewFolderRepo(db.Pool)
+	wpTemplateRepo := wprepo.NewTemplateRepo(db.Pool)
+	wpUC := wpusecase.NewWorkingPaperUseCase(wpWPRepo, wpReviewRepo, auditLogger)
+	wpReviewUC := wpusecase.NewReviewUseCase(wpReviewRepo, wpCommentRepo, wpWPRepo, auditLogger)
+	wpFolderUC := wpusecase.NewFolderUseCase(wpFolderRepo, auditLogger)
+	wpTemplateUC := wpusecase.NewTemplateUseCase(wpTemplateRepo, wpWPRepo, auditLogger)
+	wpH := wphandler.NewWPHandler(wpUC)
+	wpReviewH := wphandler.NewReviewHandler(wpReviewUC)
+	wpFolderH := wphandler.NewFolderHandler(wpFolderUC)
+	wpTmplH := wphandler.NewTemplateHandler(wpTemplateUC)
+
+	// ── Commission module ─────────────────────────────────────────────────────
+	commPlanRepo := commrepo.NewPlanRepo(db.Pool)
+	commECRepo := commrepo.NewEngCommissionRepo(db.Pool)
+	commRecordRepo := commrepo.NewRecordRepo(db.Pool)
+	commBillingReader := commrepo.NewBillingReader(db.Pool)
+	commPlanUC := commusecase.NewPlanUseCase(commPlanRepo, auditLogger)
+	commECUC := commusecase.NewEngCommissionUseCase(commECRepo, auditLogger)
+	commAccrualUC := commusecase.NewAccrualUseCase(commECRepo, commRecordRepo, commBillingReader, auditLogger)
+	commRecordUC := commusecase.NewRecordUseCase(commRecordRepo, auditLogger)
+	commPlanH := commhandler.NewPlanHandler(commPlanUC)
+	commECH := commhandler.NewEngCommissionHandler(commECUC)
+	commRecordH := commhandler.NewRecordHandler(commRecordUC)
+
+	// ── Tax Advisory module ───────────────────────────────────────────────────
+	taxDeadlineRepo := taxrepo.NewDeadlineRepo(db.Pool)
+	taxAdvisoryRepo := taxrepo.NewAdvisoryRepo(db.Pool)
+	taxComplianceRepo := taxrepo.NewComplianceRepo(db.Pool)
+	taxDeadlineUC := taxusecase.NewTaxDeadlineUseCase(taxDeadlineRepo, auditLogger)
+	taxAdvisoryUC := taxusecase.NewAdvisoryUseCase(taxAdvisoryRepo, auditLogger)
+	taxComplianceUC := taxusecase.NewComplianceUseCase(taxComplianceRepo)
+	taxDeadlineH := taxhandler.NewDeadlineHandler(taxDeadlineUC)
+	taxAdvisoryH := taxhandler.NewAdvisoryHandler(taxAdvisoryUC)
+	taxComplianceH := taxhandler.NewComplianceHandler(taxComplianceUC)
+
+	// ── Push notification module ───────────────────────────────────────────────
+	pushRelay := push.NewRelay()
+	pushDeviceRepo := push.NewDeviceRepo(db.Pool)
+	pushDeviceUC := authusecase.NewPushDeviceUseCase(pushDeviceRepo)
+	push2FAUC := authusecase.NewPush2FAUseCase(repo, repo, repo, jwtSvc, pushRelay)
+	pushH := authhandler.NewPushHandler(pushDeviceUC, push2FAUC, pushRelay, pushDeviceRepo)
+
+	// ── Reporting module ──────────────────────────────────────────────────────
+	repRepo := reportingrepo.NewReportingRepo(db.Pool)
+	repDashUC := reportingusecase.NewDashboardUseCase(repRepo)
+	repReportUC := reportingusecase.NewReportUseCase(repRepo)
+	repDashH := reportinghandler.NewDashboardHandler(repDashUC)
+	repReportH := reportinghandler.NewReportHandler(repReportUC)
+
+	// Register event handlers
+	workerSrv.Register(outbox.EventTimesheetSubmitted, worker.HandleTimesheetSubmitted)
+	workerSrv.Register(outbox.EventTimesheetApproved, worker.HandleTimesheetApproved)
+	workerSrv.Register(outbox.EventTimesheetRejected, worker.HandleTimesheetRejected)
+	workerSrv.Register(outbox.EventTimesheetLocked, worker.HandleTimesheetLocked)
+	workerSrv.Register(outbox.EventEngagementActivated, worker.HandleEngagementActivated)
+	// Tax deadline reminder job
+	workerSrv.Register(taxworker.TaskDeadlineReminder, taxworker.NewDeadlineReminderHandler(taxDeadlineUC))
+
+	// Commission accrual event handlers
+	workerSrv.Register(outbox.EventInvoiceIssued, commworker.NewInvoiceIssuedHandler(commAccrualUC))
+	workerSrv.Register(outbox.EventInvoiceCancelled, commworker.NewInvoiceCancelledHandler(commAccrualUC))
+	workerSrv.Register(outbox.EventPaymentReceived, commworker.NewPaymentReceivedHandler(commAccrualUC))
+	workerSrv.Register(outbox.EventEngagementSettled, commworker.NewEngagementSettledHandler(commAccrualUC))
+	// Reporting MV nightly refresh job
+	workerSrv.Register(reportingworker.TaskRefreshMVs, reportingworker.NewMVRefreshHandler(repReportUC))
 
 	// ── Router ────────────────────────────────────────────────────────────────
 	if cfg.App.Env == "production" {
@@ -133,9 +308,16 @@ func main() {
 	authMW := middleware.AuthMiddleware(jwtSvc)
 
 	v1 := r.Group("/api/v1")
-	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, authMW)
-	crmhandler.RegisterRoutes(v1, clientH, authMW)
+	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, pushH, authMW)
+	crmhandler.RegisterRoutes(v1, clientH, contactH, authMW)
 	hrmhandler.RegisterRoutes(v1, employeeH, authMW)
+	enghandler.RegisterRoutes(v1, engH, teamH, taskH, costH, authMW)
+	tshandler.RegisterRoutes(v1, tsH, entryH, attendanceH, authMW)
+	billinghandler.RegisterRoutes(v1, invoiceH, paymentH, memoH, arH, reportH, authMW)
+	wphandler.RegisterRoutes(v1, wpH, wpReviewH, wpTmplH, wpFolderH, authMW)
+	commhandler.RegisterRoutes(v1, commPlanH, commECH, commRecordH, authMW)
+	taxhandler.RegisterRoutes(v1, taxDeadlineH, taxAdvisoryH, taxComplianceH, authMW)
+	reportinghandler.RegisterRoutes(v1, repDashH, repReportH, authMW)
 	ws.RegisterRoutes(v1, wsH) // GET /api/v1/events/stream — public upgrade, auth via ?token=
 
 	// ── HTTP server ───────────────────────────────────────────────────────────
@@ -150,6 +332,17 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
+	// ── Start background services ─────────────────────────────────────────────
+	bgCtx, bgCancel := context.WithCancel(context.Background())
+	defer bgCancel()
+
+	go outboxPoller.Run(bgCtx)
+	go func() {
+		if err := workerSrv.Run(); err != nil {
+			l.Info("worker stopped: " + err.Error())
+		}
+	}()
+
 	go func() {
 		l.Info("server starting on :" + cfg.App.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -159,6 +352,9 @@ func main() {
 
 	<-quit
 	l.Info("shutting down server...")
+
+	bgCancel()
+	workerSrv.Shutdown()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

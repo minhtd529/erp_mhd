@@ -22,6 +22,7 @@ import (
 	authhandler "github.com/mdh/erp-audit/api/internal/global/auth/handler"
 	authrepo "github.com/mdh/erp-audit/api/internal/global/auth/repository"
 	authusecase "github.com/mdh/erp-audit/api/internal/global/auth/usecase"
+	"github.com/mdh/erp-audit/api/pkg/push"
 )
 
 func setupTestDB(t *testing.T) *pgxpool.Pool {
@@ -84,10 +85,16 @@ func setupTestRouter(pool *pgxpool.Pool) *gin.Engine {
 	twoFAH := authhandler.NewTwoFAHandler(enable2FAUC, verifySetupUC, disable2FAUC, verify2FAUC, verifyBackupUC, regenBackupUC)
 	authMW := middleware.AuthMiddleware(jwtSvc)
 
+	pushDeviceRepo := push.NewDeviceRepo(pool)
+	pushDeviceUC := authusecase.NewPushDeviceUseCase(pushDeviceRepo)
+	pushRelay := push.NewRelay()
+	push2FAUC := authusecase.NewPush2FAUseCase(repo, repo, repo, jwtSvc, pushRelay)
+	pushH := authhandler.NewPushHandler(pushDeviceUC, push2FAUC, pushRelay, pushDeviceRepo)
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 	v1 := r.Group("/api/v1")
-	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, authMW)
+	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, pushH, authMW)
 
 	return r
 }

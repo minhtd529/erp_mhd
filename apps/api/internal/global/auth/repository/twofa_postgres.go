@@ -143,6 +143,48 @@ func (r *Repo) MarkChallengeVerified(ctx context.Context, challengeID string) er
 	return nil
 }
 
+// RespondToPushChallenge records the mobile app's approve/reject decision.
+func (r *Repo) RespondToPushChallenge(ctx context.Context, challengeID string, approved bool) error {
+	response := "rejected"
+	if approved {
+		response = "approved"
+	}
+	const q = `
+		UPDATE two_factor_challenges
+		SET push_response = $2, responded_at = NOW()
+		WHERE challenge_id = $1 AND method = 'push' AND push_response IS NULL AND expires_at > NOW()`
+	tag, err := r.pool.Exec(ctx, q, challengeID, response)
+	if err != nil {
+		return fmt.Errorf("RespondToPushChallenge: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrChallengeNotFound
+	}
+	return nil
+}
+
+// FindPushChallenge retrieves a push challenge with its response fields.
+func (r *Repo) FindPushChallenge(ctx context.Context, challengeID string) (*domain.TwoFactorChallenge, error) {
+	const q = `
+		SELECT id, user_id, challenge_id, method, ip_address,
+		       attempt_count, expires_at, verified_at, invalidated_at,
+		       push_response, responded_at, created_at
+		FROM two_factor_challenges
+		WHERE challenge_id = $1 AND method = 'push'`
+	var ch domain.TwoFactorChallenge
+	if err := r.pool.QueryRow(ctx, q, challengeID).Scan(
+		&ch.ID, &ch.UserID, &ch.ChallengeID, &ch.Method, &ch.IPAddress,
+		&ch.AttemptCount, &ch.ExpiresAt, &ch.VerifiedAt, &ch.InvalidatedAt,
+		&ch.PushResponse, &ch.RespondedAt, &ch.CreatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrChallengeNotFound
+		}
+		return nil, fmt.Errorf("FindPushChallenge: %w", err)
+	}
+	return &ch, nil
+}
+
 // ─── Backup codes ─────────────────────────────────────────────────────────────
 
 // StoreBackupCodes inserts a batch of bcrypt-hashed backup codes for a user.

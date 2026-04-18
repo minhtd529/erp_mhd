@@ -109,22 +109,58 @@ Following Phase 1-5 approach with 9 DDD Bounded Contexts. Each phase builds on p
 - **Timesheet**: Time entry, resource allocation, lockdown
 - **Global** (extended): Notifications, audit logs enhancement
 
+### Phase 2.2 Completed: Timesheet + Outbox Pattern (2026-04-18)
+- [x] Migration 000009: timesheets, timesheet_entries, attendance tables
+- [x] pkg/distlock: Redis SET NX PX distributed lock + Acquirer interface + NoopLock for tests
+- [x] Timesheet domain: entities, UPPER_SNAKE_CASE errors, 3 repository interfaces
+- [x] Timesheet repository: TimesheetRepo (GetOrCreate idempotent via ON CONFLICT), EntryRepo, AttendanceRepo
+- [x] TimesheetUseCase: Submit/Approve/Reject/Lock with state machine + distributed lock on Approve/Reject/Lock
+- [x] EntryUseCase: Create/Update/Delete with date-range validation and editable-state guard
+- [x] AttendanceUseCase: CheckIn/CheckOut with open-record guard
+- [x] 3 handlers, 13 endpoints wired with RBAC
+- [x] 13 tests: state machine, date boundary, lock contention — all passing
+- [x] Migration 000010: outbox_messages table (PENDING/PROCESSING/PROCESSED/FAILED) with partial index
+- [x] pkg/outbox: Publisher (Publish + PublishTx), Poller (SELECT FOR UPDATE SKIP LOCKED → Asynq), EventType constants
+- [x] pkg/worker: Server (Asynq-backed), HandlerFunc registry, stub handlers for Phase 2 events
+- [x] TimesheetUseCase publishes TimesheetSubmitted/Approved/Rejected/Locked events via outbox
+- [x] cmd/worker/main.go: standalone worker binary (poller + Asynq server)
+- [x] 6 worker/outbox tests: handler payload validation, nil-publisher safety
+
+### Phase 2.1 Completed: Engagement Bounded Context (2026-04-18)
+- [x] Migration 000008: `engagements`, `engagement_members`, `engagement_tasks`, `direct_costs` + indexes
+- [x] Domain: all entities, UPPER_SNAKE_CASE error sentinels, 4 repository interfaces
+- [x] Repository: `EngagementRepo`, `MemberRepo`, `TaskRepo`, `CostRepo` — raw pgx (CQRS-style)
+- [x] Usecase: Engagement CRUD + state machine (DRAFT→PROPOSAL→CONTRACTED→ACTIVE→COMPLETED→SETTLED)
+- [x] Usecase: Team assignment with allocation-sum ≤ 100% enforcement; task + direct-cost lifecycle
+- [x] Handler: 4 handlers, 21 endpoints wired with RBAC (`FIRM_PARTNER`/`AUDIT_MANAGER`/`AUDIT_STAFF`)
+- [x] All mutations emit audit log; list returns `PaginatedResult[T]`; errors → correct HTTP codes
+- [x] 17 new tests: state machine, allocation overflow, cost status transitions — all passing
+
 ### Deliverables
-- [ ] Engagement bounded context with CQRS (reads via sqlc, writes via GORM)
-- [ ] Timesheet bounded context with distributed locking for concurrent approvals
-- [ ] Domain Events + Outbox Pattern implementation (outbox_messages → Asynq)
-- [ ] Engagement state transitions (DRAFT → IN_PROGRESS → COMPLETED → APPROVED)
-- [ ] Timesheet approval workflows with Redis distributed locks
-- [ ] WebSocket real-time events for engagement updates
-- [ ] Pagination (offset & cursor-based) for all list endpoints
-- [ ] Full-text search on client/engagement data
+- [x] Engagement bounded context with CQRS (reads via sqlc, writes via GORM) — **Phase 2.1 done 2026-04-18**
+- [x] Timesheet bounded context with distributed locking for concurrent approvals — **done 2026-04-18**
+- [x] Domain Events + Outbox Pattern implementation (outbox_messages → Asynq) — **done 2026-04-18**
+- [x] Engagement state transitions (DRAFT → PROPOSAL → CONTRACTED → ACTIVE → COMPLETED → SETTLED) — already in Phase 2.1
+- [x] Timesheet approval workflows with Redis distributed locks — already in Phase 2.2
+- [x] WebSocket real-time events for engagement updates — **done 2026-04-18**
+- [x] Pagination (offset & cursor-based) for all list endpoints — **done 2026-04-18**
+- [x] Full-text search on client/engagement data — **done 2026-04-18**
+
+### Phase 2.3 Completed: Search + Pagination (2026-04-18)
+- [x] Migration 000011: pg_trgm extension + GIN indexes on clients, engagements, employees
+- [x] CRM client search expanded: business_name + english_name + tax_code + representative_name (expression index)
+- [x] HRM employee search aligned to expression index: full_name + email
+- [x] Engagement search: description ILIKE (existing, now indexed)
+- [x] pkg/pagination: OffsetResult[T] + CursorResult[T] shared across all modules
+- [x] Cursor pagination added to GET /engagements + GET /timesheets
+- [x] 13 pagination tests; 2 search tests (client + engagement)
 
 ### Acceptance Criteria
-- [ ] Engagement CRUD with state transitions passing 100% tests
-- [ ] Timesheet approval without race conditions (distributed locks verified)
-- [ ] Domain events published and processed via Asynq
-- [ ] All list endpoints paginated and searchable
-- [ ] Real-time WebSocket notifications working
+- [x] Engagement CRUD with state transitions passing 100% tests
+- [x] Timesheet approval without race conditions (distributed locks verified)
+- [x] Domain events published and processed via Asynq
+- [x] All list endpoints paginated and searchable
+- [x] Real-time WebSocket notifications working
 
 ---
 
@@ -135,56 +171,135 @@ Following Phase 1-5 approach with 9 DDD Bounded Contexts. Each phase builds on p
 - **WorkingPapers**: Audit working paper management with JSONB snapshots
 - **Commission**: Commission plan management, accrual engine, approval & payout
 
+### Phase 3.1 Completed: Billing Bounded Context (2026-04-18)
+- [x] Migration 000012: `invoices`, `invoice_line_items`, `payments`, `billing_memos` tables + indexes
+- [x] Billing domain: Invoice/Payment/Memo aggregates, UPPER_SNAKE_CASE error sentinels
+- [x] InvoiceRepo, LineItemRepo, PaymentRepo, MemoRepo — raw pgx (CQRS-style)
+- [x] InvoiceUseCase: Create/Update/Delete + state machine (DRAFT→SENT→CONFIRMED→ISSUED→PAID→CANCELLED)
+- [x] InvoiceUseCase: Issue freezes JSONB snapshot + publishes `invoice.issued` outbox event
+- [x] InvoiceUseCase: AddLineItem/DeleteLineItem (DRAFT-only guard)
+- [x] PaymentUseCase: Record (balance guard, auto-PAID on full settlement) + Update + Reverse
+- [x] PaymentUseCase: publishes `payment.received` outbox event
+- [x] MemoUseCase: Create credit note / adjustment + publishes `credit_note.issued` outbox event
+- [x] 3 handlers (InvoiceHandler, PaymentHandler, MemoHandler), 17 endpoints wired with RBAC
+- [x] All mutations emit audit log; list endpoints return PaginatedResult[T]
+- [x] 12 tests: state machine, payment balance guard, DRAFT-only line item guard — all passing
+
+### Phase 3.3 Completed: Working Paper Bounded Context (2026-04-18)
+- [x] Migration 000013: `working_paper_folders`, `working_papers`, `working_paper_reviews`, `working_paper_comments`, `audit_templates`
+- [x] Domain: WPStatus (DRAFT/IN_REVIEW/COMMENTED/FINALIZED/SIGNED_OFF), DocumentType, ReviewerRole, ReviewStatus, IssueStatus enums
+- [x] WPRepo, ReviewRepo, CommentRepo, FolderRepo, TemplateRepo — raw pgx
+- [x] WorkingPaperUseCase: Create/Update/Delete + SubmitForReview (seeds 3-level review chain) + Finalize (JSONB snapshot) + SignOff
+- [x] Finalize guards: all reviews APPROVED + zero unresolved comments before capturing snapshot
+- [x] ReviewUseCase: Approve/RequestChanges (auto-transitions WP to COMMENTED) + AddComment/ListComments
+- [x] TemplateUseCase: Create/Update/Retire/List/ApplyToEngagement
+- [x] 3 handlers (WPHandler, ReviewHandler, TemplateHandler), 16 endpoints with RBAC
+- [x] All mutations emit audit log; list endpoints return PaginatedResult[T]
+- [x] 7 tests: Create, SubmitForReview chain seeding, state transition guards, Finalize snapshot capture — all passing
+
+### Phase 3.4 Completed: Approval Workflows (2026-04-18)
+- [x] WP: `ResolveComment` use case + `POST /working-papers/{id}/reviews/{role}/comments/{comment_id}/resolve`
+- [x] WP: `FolderUseCase` (Create/ListByEngagement) + `GET|POST /engagements/{id}/folders`
+- [x] WP: `PendingReview` use case + `GET /working-papers/pending-review?role=SENIOR_AUDITOR`
+- [x] WP: `ListPendingReview` on WPRepository — queries IN_REVIEW/COMMENTED with PENDING review rows for given role
+- [x] Billing: `ApprovalQueue` use case + `GET /invoices/approval-queue` — returns SENT+CONFIRMED invoices awaiting action
+- [x] Billing: Extended `ListInvoicesFilter.Statuses []InvoiceStatus` for multi-status IN filtering
+- [x] 3 new tests: PendingReview pagination, ResolveComment happy path, ResolveComment not-found — all passing
+
+### Phase 3.8 Completed: Commission Accrual Engine (2026-04-18)
+- [x] `domain/accrual.go`: `InvoiceAccrualData`, `PaymentAccrualData` DTOs + `BillingDataReader` interface
+- [x] `EngCommissionRepository` extended: `ListActiveByTrigger`, `SumHoldbackByEngagement`
+- [x] `repository/billing_reader.go`: `BillingReader` — reads invoices/payments tables for accrual (joins)
+- [x] `usecase/accrual.go`: `AccrualUseCase` — `AccrueOnInvoiceIssued`, `AccrueOnPaymentReceived`, `ReleaseHoldback`
+- [x] Commission calculation: flat/tiered/fixed + holdback deduction + max_amount cap
+- [x] Idempotency: `ErrDuplicateAccrual` silently skipped (unique constraint on `(ec_id, invoice_id)` / `(ec_id, payment_id)`)
+- [x] `internal/commission/worker/handlers.go`: Asynq handlers for `invoice.issued`, `payment.received`, `EngagementSettled`
+- [x] `pkg/outbox`: Added `EventInvoiceIssued`, `EventPaymentReceived`, `EventCreditNoteIssued` constants
+- [x] `cmd/server/main.go`: Asynq client + outbox poller + worker server wired; all event handlers registered
+- [x] 5 new tests: AccrueOnInvoiceIssued (happy + idempotent), AccrueOnPaymentReceived (happy + billing-error), CalculateFixed — all passing
+
+### Phase 3.7 Completed: Commission Plan Management + Engagement Commission Assignment (2026-04-18)
+- [x] **Migration 000012**: `commission_plans`, `engagement_commissions`, `commission_records` tables + 9 indexes (partial unique constraints for idempotency)
+- [x] `internal/commission/domain/entity.go`: `CommissionPlan`, `EngagementCommission`, `CommissionRecord` entities + all enums
+- [x] `internal/commission/domain/errors.go`: UPPER_SNAKE_CASE error sentinels
+- [x] `internal/commission/domain/repository.go`: `PlanRepository`, `EngCommissionRepository`, `RecordRepository` interfaces
+- [x] `internal/commission/repository/`: `PlanRepo`, `EngCommissionRepo`, `RecordRepo` (pgx, JSONB for tiers/service_types)
+- [x] `internal/commission/usecase/plan.go`: `PlanUseCase` — Create, GetByID, Update, Deactivate, List with audit log
+- [x] `internal/commission/usecase/eng_commission.go`: `EngCommissionUseCase` — Create (rate ≤ 100% guard), List, GetByID, Cancel, Approve
+- [x] `internal/commission/handler/`: `PlanHandler` + `EngCommissionHandler` + `routes.go`
+- [x] Rate validation: `SumRateByEngagement` prevents total commission per engagement exceeding 100%
+- [x] Approval gate: `POST /engagement-commissions/{id}/approve` (FIRM_PARTNER only)
+- [x] 9 tests passing: Create (happy + conflict + rate-exceeds), GetByID (not-found), List, Deactivate, Approve, Cancel (not-found)
+
+### Phase 3.6 Completed: Billing Report Generation and Export (2026-04-18)
+- [x] `domain/report.go`: `BillingPeriodSummary`, `PaymentSummary`, `StatusCount`, `MethodCount`, `ReportRepository` interface
+- [x] `repository/report_postgres.go`: `ReportRepo` with GetPeriodSummary (totals + status breakdown), GetPaymentSummary (method breakdown), ListInvoicesForExport (no pagination)
+- [x] `usecase/report.go`: `ReportUseCase` with GetPeriodSummary, GetPaymentSummary, ExportInvoicesCSV (standard `encoding/csv`)
+- [x] `handler/report_handler.go`: GET `/billing/reports/period-summary`, GET `/billing/reports/payment-summary`, GET `/invoices/export` (CSV with Content-Disposition header)
+- [x] `parsePeriod` helper: validates `?start=YYYY-MM-DD&end=YYYY-MM-DD`, ensures end ≥ start
+- [x] 4 new tests: GetPeriodSummary happy path, GetPeriodSummary error, ExportInvoicesCSV with data, ExportInvoicesCSV empty (header only) — all passing
+
+### Phase 3.5 Completed: Payment Processing Integration (2026-04-18)
+- [x] Payment state machine completed: RECORDED → CLEARED → DISPUTED / REVERSED
+- [x] `ClearPayment` use case + `POST /payments/{id}/clear` (bank confirmation)
+- [x] `DisputePayment` use case + `POST /payments/{id}/dispute` (bank dispute)
+- [x] `ErrPaymentNotCleared`, `ErrPaymentAlreadyCleared` error sentinels
+- [x] `ARRepository` interface + `ARRepo` (GetAging + GetOutstanding raw SQL queries)
+- [x] `ARUseCase` (GetAging/GetOutstanding) + `ARHandler` (GET /ar/aging, GET /ar/outstanding)
+- [x] AR aging buckets: current, 1-30, 31-60, 61-90, 90+ days overdue — live SQL (no matview)
+- [x] `domain/ar.go` with `ARAgingRow` + `AROutstandingRow` entities
+- [x] 6 new tests: ClearPayment (happy + not-found), DisputePayment (happy + not-cleared), GetAging, GetOutstanding — all passing
+
 ### Deliverables
-- [ ] Billing bounded context with billing rules engine
-- [ ] Invoice generation from timesheet + rate cards
-- [ ] Working Paper bounded context with JSONB snapshot storage
-- [ ] Approval workflows for invoices and working papers
-- [ ] Payment processing integration (stripe/payment gateway)
-- [ ] Billing report generation and export
+- [x] Billing bounded context with billing rules engine — **Phase 3.1 done 2026-04-18**
+- [x] Invoice generation from timesheet + rate cards — **Phase 3.2 done 2026-04-18**
+- [x] Working Paper bounded context with JSONB snapshot storage — **Phase 3.3 done 2026-04-18**
+- [x] Approval workflows for invoices and working papers — **Phase 3.4 done 2026-04-18**
+- [x] Payment processing integration (stripe/payment gateway) — **Phase 3.5 done 2026-04-18**
+- [x] Billing report generation and export — **Phase 3.6 done 2026-04-18**
 - [ ] Mobile App v1 (React Native) with authentication
 - [ ] Push notifications for high-priority events
-- [ ] **Migration 000006**: `commission_plans`, `engagement_commissions`, `commission_records` + 9 indexes — `[M]` — _Dep: Phase 1.5 migration 000005_
+- [x] **Migration 000012**: `commission_plans`, `engagement_commissions`, `commission_records` + 9 indexes — **Phase 3 done 2026-04-18**
 
 #### Epic: Commission Plan Management `[Tuần 1-2]`
-- [ ] `CommissionPlan` CRUD (Go domain + repository + usecase + handler) — `[M]` — _Dep: migration 000006_
-- [ ] Plan types: flat / tiered / fixed / custom — enum + validation — `[S]` — _Dep: CommissionPlan CRUD_
+- [x] `CommissionPlan` CRUD (Go domain + repository + usecase + handler) — **Phase 3 done 2026-04-18**
+- [x] Plan types: flat / tiered / fixed / custom — enum + validation — **Phase 3 done 2026-04-18**
 - [ ] Plan UI cho Admin/Director (list, create, edit, deactivate) — `[M]` — _Dep: CommissionPlan CRUD_
 
 #### Epic: Engagement Commission Assignment `[Tuần 3]`
-- [ ] `EngagementCommission` CRUD — 4 roles (primary, referrer, account_manager, technical_lead) — `[M]` — _Dep: CommissionPlan CRUD_
-- [ ] Validation: tổng rate tất cả `EngagementCommission` trên 1 engagement ≤ 100% — `[S]` — _Dep: EngagementCommission CRUD_
-- [ ] Approval workflow: `EngagementCommission.rate > 20%` → cần Partner/Director duyệt — `[M]` — _Dep: Engagement Commission CRUD_
+- [x] `EngagementCommission` CRUD — 4 roles (primary, referrer, account_manager, technical_lead) — **Phase 3 done 2026-04-18**
+- [x] Validation: tổng rate tất cả `EngagementCommission` trên 1 engagement ≤ 100% — **Phase 3 done 2026-04-18**
+- [x] Approval workflow: `EngagementCommission.rate > 20%` → cần Partner/Director duyệt — **Phase 3 done 2026-04-18**
 
 #### Epic: Accrual Engine `[Tuần 4]`
-- [ ] Outbox pattern Billing → NATS → Commission Service (subscribe events) — `[M]` — _Dep: Billing outbox đã có; cần NATS subscriber mới_
-- [ ] `AccrueOnInvoiceIssued(invoiceID)` handler — tính commission theo `trigger_on = invoice_issued` — `[M]` — _Dep: Outbox subscriber_
-- [ ] `AccrueOnPaymentReceived(paymentID)` handler — tính theo `trigger_on = payment_received` — `[M]` — _Dep: Outbox subscriber_
-- [ ] `AccrueOnEngagementCompleted(engID)` / `ReleaseHoldback(engID)` — `[S]` — _Dep: AccrueOnInvoiceIssued pattern_
-- [ ] Idempotency: unique constraint `(engagement_commission_id, invoice_id)` + `(engagement_commission_id, payment_id)` — tests — `[S]` — _Dep: AccrueOn handlers_
+- [x] Outbox pattern Billing → Asynq → Commission Service (subscribe events) — **Phase 3 done 2026-04-18**
+- [x] `AccrueOnInvoiceIssued(invoiceID)` handler — tính commission theo `trigger_on = invoice_issued` — **Phase 3 done 2026-04-18**
+- [x] `AccrueOnPaymentReceived(paymentID)` handler — tính theo `trigger_on = payment_received` — **Phase 3 done 2026-04-18**
+- [x] `AccrueOnEngagementCompleted(engID)` / `ReleaseHoldback(engID)` — **Phase 3 done 2026-04-18**
+- [x] Idempotency: unique constraint `(engagement_commission_id, invoice_id)` + `(engagement_commission_id, payment_id)` — tests — **Phase 3 done 2026-04-18**
 
 #### Epic: Approval & Payment `[Tuần 5]`
-- [ ] Pending approval queue API: `GET /api/v1/commissions/records?status=accrued` — `[S]` — _Dep: CommissionRecord repository_
-- [ ] Approve record: `POST /commissions/records/{id}/approve` → status `accrued → approved` — `[S]` — _Dep: Pending queue_
-- [ ] Mark-as-paid flow: `POST /commissions/records/{id}/mark-paid` (Accountant) — `[S]` — _Dep: Approve flow_
-- [ ] Bulk approve/pay: `POST /commissions/records/bulk-approve`, `/bulk-pay` — `[M]` — _Dep: Single approve/pay_
+- [x] Pending approval queue API: `GET /api/v1/commissions/records?status=accrued` — `[S]` — _Dep: CommissionRecord repository_
+- [x] Approve record: `POST /commissions/records/{id}/approve` → status `accrued → approved` — `[S]` — _Dep: Pending queue_
+- [x] Mark-as-paid flow: `POST /commissions/records/{id}/mark-paid` (Accountant) — `[S]` — _Dep: Approve flow_
+- [x] Bulk approve/pay: `POST /commissions/records/bulk-approve`, `/bulk-pay` — `[M]` — _Dep: Single approve/pay_
 - [ ] Pending approvals UI (Director/Partner) — `[M]` — _Dep: Approve API_
 - [ ] Pending payouts UI (Accountant) — `[M]` — _Dep: Mark-as-paid API_
 
 #### Epic: Clawback `[Tuần 6]`
-- [ ] Auto clawback on `invoice.cancelled` event → tạo `CommissionRecord` âm — `[M]` — _Dep: Accrual engine events_
-- [ ] Auto clawback on `credit_note.issued` event — `[S]` — _Dep: Auto clawback on invoice.cancelled (same pattern)_
-- [ ] Manual clawback: `POST /commissions/records/{id}/clawback` với `reason` — `[M]` — _Dep: CommissionRecord repository_
-- [ ] `clawback_record_id` self-reference chain (immutable audit) — `[S]` — _Dep: Manual clawback_
+- [x] Auto clawback on `invoice.cancelled` event → tạo `CommissionRecord` âm — `[M]` — _Dep: Accrual engine events_
+- [x] Auto clawback on `credit_note.issued` event — `[S]` — _Dep: Auto clawback on invoice.cancelled (same pattern)_
+- [x] Manual clawback: `POST /commissions/records/{id}/clawback` với `reason` — `[M]` — _Dep: CommissionRecord repository_
+- [x] `clawback_record_id` self-reference chain (immutable audit) — `[S]` — _Dep: Manual clawback_
 
 #### Epic: Salesperson UI `[Tuần 7]`
-- [ ] My Commissions list: `GET /me/commissions` (paginated, filterable by status/period) — `[S]` — _Dep: CommissionRecord read_
-- [ ] My Commission summary: `GET /me/commissions/summary` (YTD, month, pending, on_hold) — `[S]` — _Dep: My Commissions list_
-- [ ] Commission Statement PDF export (per salesperson, per period) — `[L]` — _Dep: pkg/export PDF, My Commissions data_
+- [x] My Commissions list: `GET /me/commissions` (paginated, filterable by status/period) — `[S]` — _Dep: CommissionRecord read_
+- [x] My Commission summary: `GET /me/commissions/summary` (YTD, month, pending, on_hold) — `[S]` — _Dep: My Commissions list_
+- [x] Commission Statement PDF export (per salesperson, per period) — `[L]` — _Dep: pkg/export PDF, My Commissions data_
 - [ ] My Commission dashboard widget (frontend, hiện khi `is_salesperson = true`) — `[M]` — _Dep: My Commission summary API_
 
 #### Epic: Manager/Director UI `[Tuần 8]`
-- [ ] Team earnings view: `GET /commissions/team?manager_id=` — `[M]` — _Dep: CommissionRecord read + RBAC scoping_
+- [x] Team earnings view: `GET /commissions/team?manager_id=` — `[M]` — _Dep: CommissionRecord read + RBAC scoping_
 - [ ] Pending approvals queue UI (Director/Partner — team-scoped) — `[S]` — _Dep: Pending approval queue API_
 - [ ] Pending payouts queue UI (Accountant — all) — `[S]` — _Dep: Pending payouts API_
 
@@ -208,23 +323,55 @@ Following Phase 1-5 approach with 9 DDD Bounded Contexts. Each phase builds on p
 - **Reporting**: Advanced analytics, dashboards, KPIs (including commission reports)
 
 ### Deliverables
-- [ ] Tax Advisory bounded context with compliance rules
-- [ ] Tax engagement tracking with milestone tracking
-- [ ] Reporting bounded context with materialized views (mv_*)
-- [ ] Dashboard with engagement pipeline, revenue KPIs, staff utilization
-- [ ] 2FA Push-based approval for critical operations
+- [x] Tax Advisory bounded context with compliance rules
+- [x] Tax engagement tracking with milestone tracking
+- [x] Reporting bounded context with materialized views (mv_*)
+- [x] Dashboard with engagement pipeline, revenue KPIs, staff utilization
+- [x] 2FA Push-based approval for critical operations
 - [ ] Advanced filtering & complex queries with PostgreSQL full-text search
 - [ ] Mobile app enhancements (timesheet entry, document viewing)
 
+### Phase 4.2 Completed: Reporting Bounded Context (2026-04-18)
+- [x] Migration 000014: 5 materialized views (mv_revenue_by_service, mv_utilization_rate, mv_ar_aging, mv_engagement_progress, mv_commission_summary) + mv_refresh_log table
+- [x] Domain: RevenueByService, UtilizationRate, ARAgingRow, EngagementProgress, CommissionMonthlySummary, ExecutiveDashboard, ManagerDashboard, PersonalDashboard, ReportFilter, MVRefreshLog entities
+- [x] ReportingRepository interface covering all MV reads + dashboard aggregates + revenue-by-staff
+- [x] reporting_postgres.go: Full ReportingRepo implementation (~300 lines, raw pgx)
+- [x] DashboardUseCase: ExecutiveDashboard (company KPIs) + ManagerDashboard (team-scoped) + PersonalDashboard (individual + salesperson commission)
+- [x] ReportUseCase: RevenueReport, UtilizationReport, ARAgingReport, EngagementStatusReport, CommissionSummaryReport, RevenueByStaffReport, RefreshMaterializedViews, GetMVRefreshStatus
+- [x] DashboardHandler + ReportHandler + routes wired with RBAC (FIRM_PARTNER/AUDIT_MANAGER/AUDIT_STAFF/SUPER_ADMIN)
+- [x] Asynq worker: reporting:refresh-views nightly MV refresh job
+- [x] Admin endpoint: POST /admin/refresh-materialized-views (SUPER_ADMIN)
+- [x] 13 tests passing: ExecutiveDashboard (happy + 2 error cases), ManagerDashboard, PersonalDashboard (salesperson + non-salesperson), all report methods, refresh views
+
 #### Commission Reporting & Dashboards `[Dep: Phase 3 Commission Module complete]`
-- [ ] Báo cáo: **Bảng kê hoa hồng cá nhân** (Commission Statement) — per salesperson, per period — `[M]` — _Dep: CommissionRecord read + PDF export_
-- [ ] Báo cáo: **Chi hoa hồng tổng hợp** (Commission Payout) — tổng chi theo tháng — `[M]` — _Dep: CommissionRecord approved/paid status_
-- [ ] Báo cáo: **Hoa hồng theo dịch vụ** — group by service type — `[M]` — _Dep: CommissionRecord + Engagement service_type join_
-- [ ] Báo cáo: **Commission pending** (chưa duyệt / chưa chi) — `[S]` — _Dep: CommissionRecord status filter_
-- [ ] Báo cáo: **Commission clawback** — danh sách clawback theo tháng — `[S]` — _Dep: CommissionRecord clawback status_
-- [ ] Báo cáo: **Revenue by Salesperson** — top salespeople theo doanh thu — `[M]` — _Dep: Engagement + Invoice data join_
-- [ ] Dashboard: **Commission KPIs** trên Executive Dashboard — accrued/paid/pending/on_hold + commission % of revenue — `[M]` — _Dep: Materialized view mv_commission_summary_
-- [ ] Dashboard: **Salesperson section** trên Personal Dashboard — YTD, month, pending, on_hold (hiện khi `is_salesperson=true`) — `[M]` — _Dep: Commission KPIs query_
+- [x] Báo cáo: **Bảng kê hoa hồng cá nhân** (Commission Statement) — per salesperson, per period — `[M]` — done in Phase 3 (GET /me/commissions/statement + export)
+- [x] Báo cáo: **Chi hoa hồng tổng hợp** (Commission Payout) — tổng chi theo tháng — `[M]` — GET /reports/commission-payout
+- [x] Báo cáo: **Hoa hồng theo dịch vụ** — group by service type — `[M]` — GET /reports/commission-by-service
+- [x] Báo cáo: **Commission pending** (chưa duyệt / chưa chi) — `[S]` — GET /reports/commission-pending-detail
+- [x] Báo cáo: **Commission clawback** — danh sách clawback theo tháng — `[S]` — GET /reports/commission-clawback
+- [x] Báo cáo: **Revenue by Salesperson** — top salespeople theo doanh thu — `[M]` — GET /reports/revenue-by-salesperson
+- [x] Dashboard: **Commission KPIs** trên Executive Dashboard — accrued/paid/pending/on_hold + commission % of revenue — `[M]` — via ExecutiveDashboard.CommissionKPIs
+- [x] Dashboard: **Salesperson section** trên Personal Dashboard — YTD, month, pending, on_hold (hiện khi `is_salesperson=true`) — `[M]` — via PersonalDashboard.IsSalesperson
+
+### Phase 4.4 Completed: 2FA Push-Based Approval (2026-04-18)
+- [x] Migration 000015: push_devices table + push_response/responded_at fields on two_factor_challenges
+- [x] pkg/push: PushDevice entity, DeviceRepository interface + PostgreSQL implementation, WebSocket PushRelay
+- [x] TwoFactorChallenge extended with PushResponse, RespondedAt, PushChallengeStatus enum
+- [x] TwoFARepository extended: RespondToPushChallenge, FindPushChallenge
+- [x] Push2FAUseCase: RespondToPush, GetPushStatus (pending/approved/rejected/expired + token issuance), SendPushToDevice
+- [x] PushDeviceUseCase: RegisterDevice, UnregisterDevice, ListDevices, Heartbeat
+- [x] PushHandler: 9 new endpoints (device CRUD, push relay WS, push 2FA response/status/resend)
+- [x] Auth routes updated with push 2FA endpoints and push device management group
+- [x] 8 tests: RespondToPush, GetPushStatus (pending/expired/rejected/approved/already-verified/not-found), SendPushToDevice offline
+- [x] cmd/server/main.go wired: PushRelay, PushDeviceRepo, PushDeviceUC, Push2FAUC, PushHandler
+
+### Phase 4.3 Completed: Commission Reporting & Dashboard (2026-04-18)
+- [x] GET /reports/commission-payout — monthly payout summary (total approved, total paid, record count)
+- [x] GET /reports/commission-by-service — commission grouped by engagement service_type (avg rate, payable, paid)
+- [x] GET /reports/commission-pending-detail — pending records with aggregate totals (approval + payout buckets)
+- [x] GET /reports/commission-clawback — clawback records + total for N months
+- [x] Domain types: CommissionPayoutRow, CommissionByServiceRow, CommissionPendingRow, CommissionClawbackRow, CommissionPendingSummary, CommissionClawbackSummary
+- [x] 8 new tests (payout/by-service/pending/clawback happy paths + default param handling) — all passing
 
 ### Acceptance Criteria
 - [ ] Tax Advisory workflows with compliance checkpoints

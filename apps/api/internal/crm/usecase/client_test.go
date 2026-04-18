@@ -83,7 +83,7 @@ func TestClientUseCase_Create(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			uc := usecase.NewClientUseCase(tt.repo, nil)
-			resp, err := uc.Create(context.Background(), tt.req, nil, "")
+			resp, err := uc.Create(context.Background(), tt.req, uuid.UUID{}, "")
 			if tt.wantErr != nil {
 				if err == nil || err.Error() != tt.wantErr.Error() {
 					t.Fatalf("want err %v, got %v", tt.wantErr, err)
@@ -168,7 +168,7 @@ func TestClientUseCase_Update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			uc := usecase.NewClientUseCase(tt.repo, nil)
-			_, err := uc.Update(context.Background(), id, usecase.ClientUpdateRequest{BusinessName: "Updated"}, nil, "")
+			_, err := uc.Update(context.Background(), id, usecase.ClientUpdateRequest{BusinessName: "Updated"}, uuid.UUID{}, "")
 			if tt.wantErr != nil {
 				if err == nil || err.Error() != tt.wantErr.Error() {
 					t.Fatalf("want err %v, got %v", tt.wantErr, err)
@@ -204,7 +204,7 @@ func TestClientUseCase_Delete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			uc := usecase.NewClientUseCase(tt.repo, nil)
-			err := uc.Delete(context.Background(), id, nil, "")
+			err := uc.Delete(context.Background(), id, uuid.UUID{}, "")
 			if tt.wantErr != nil {
 				if err == nil || err.Error() != tt.wantErr.Error() {
 					t.Fatalf("want err %v, got %v", tt.wantErr, err)
@@ -241,7 +241,7 @@ func TestClientUseCase_Create_WithSalesFields(t *testing.T) {
 		BusinessName: "Acme",
 		SalesOwnerID: &ownerID,
 		ReferrerID:   &refID,
-	}, nil, "")
+	}, uuid.UUID{}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -271,5 +271,26 @@ func TestClientUseCase_List(t *testing.T) {
 	}
 	if len(result.Data) != 2 {
 		t.Errorf("want 2 items, got %d", len(result.Data))
+	}
+}
+
+func TestClientUseCase_Search(t *testing.T) {
+	t.Parallel()
+
+	matched := []*domain.Client{
+		{ID: uuid.New(), TaxCode: "0123456789", BusinessName: "Acme Corp", Status: domain.ClientStatusAccepted},
+	}
+
+	// The mock returns matched regardless of Q; we test that the request is accepted and results returned.
+	uc := usecase.NewClientUseCase(&mockClientRepo{listItems: matched, listTotal: 1}, nil)
+	result, err := uc.List(context.Background(), usecase.ClientListRequest{Page: 1, Size: 20, Q: "Acme"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 1 {
+		t.Errorf("want 1 result, got %d", result.Total)
+	}
+	if result.Data[0].BusinessName != "Acme Corp" {
+		t.Errorf("unexpected result: %v", result.Data[0].BusinessName)
 	}
 }

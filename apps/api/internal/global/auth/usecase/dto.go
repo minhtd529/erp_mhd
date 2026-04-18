@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mdh/erp-audit/api/pkg/pagination"
 )
 
 // ─── Auth DTOs ───────────────────────────────────────────────────────────────
@@ -73,14 +74,8 @@ type AssignRoleRequest struct {
 	RoleCode string `json:"role_code" binding:"required"`
 }
 
-// PaginatedResult is a generic paginated list wrapper.
-type PaginatedResult[T any] struct {
-	Data       []T   `json:"data"`
-	Total      int64 `json:"total"`
-	Page       int   `json:"page"`
-	Size       int   `json:"size"`
-	TotalPages int   `json:"total_pages"`
-}
+// PaginatedResult is the shared offset pagination type.
+type PaginatedResult[T any] = pagination.OffsetResult[T]
 
 // ─── 2FA DTOs ────────────────────────────────────────────────────────────────
 

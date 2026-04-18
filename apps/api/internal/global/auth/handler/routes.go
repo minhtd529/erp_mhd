@@ -11,6 +11,7 @@ func RegisterRoutes(
 	auth *AuthHandler,
 	users *UserHandler,
 	twoFA *TwoFAHandler,
+	pushH *PushHandler,
 	authMW gin.HandlerFunc,
 ) {
 	// ─── Public auth endpoints ────────────────────────────────────────────────
@@ -29,7 +30,24 @@ func RegisterRoutes(
 		a.POST("/2fa/confirm", authMW, twoFA.Confirm)
 		a.DELETE("/2fa", authMW, twoFA.Disable)
 		a.POST("/2fa/backup-codes/regenerate", authMW, twoFA.RegenBackupCodes)
+
+		// Push 2FA (mobile app response + browser polling)
+		a.POST("/2fa/push-response", pushH.PushResponse)
+		a.GET("/2fa/push-status/:challengeId", pushH.PushStatus)
+		a.POST("/2fa/resend-push", pushH.ResendPush)
 	}
+
+	// Push device management (authenticated)
+	pd := v1.Group("/push", authMW)
+	{
+		pd.POST("/devices/register", pushH.RegisterDevice)
+		pd.DELETE("/devices", pushH.UnregisterDevice)
+		pd.GET("/devices", pushH.ListDevices)
+		pd.POST("/devices/heartbeat", pushH.Heartbeat)
+	}
+
+	// Push relay WebSocket (device-token authenticated, not JWT)
+	v1.GET("/ws/push", pushH.PushRelayWS)
 
 	// ─── Authenticated user endpoints ────────────────────────────────────────
 	v1.GET("/me", authMW, auth.Me)

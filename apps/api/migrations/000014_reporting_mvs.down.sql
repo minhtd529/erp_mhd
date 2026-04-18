@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS mv_refresh_log;
+DROP MATERIALIZED VIEW IF EXISTS mv_commission_summary;
+DROP MATERIALIZED VIEW IF EXISTS mv_engagement_progress;
+DROP MATERIALIZED VIEW IF EXISTS mv_ar_aging;
+DROP MATERIALIZED VIEW IF EXISTS mv_utilization_rate;
+DROP MATERIALIZED VIEW IF EXISTS mv_revenue_by_service;

@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mdh/erp-audit/api/internal/crm/domain"
+	"github.com/mdh/erp-audit/api/pkg/pagination"
 )
 
 // ClientCreateRequest is the body for POST /api/v1/clients.
@@ -107,21 +108,11 @@ type ContactResponse struct {
 	UpdatedBy uuid.UUID `json:"updated_by"`
 }
 
-// PaginatedResult is a generic paginated wrapper (local copy to avoid import cycle).
-type PaginatedResult[T any] struct {
-	Data       []T   `json:"data"`
-	Total      int64 `json:"total"`
-	Page       int   `json:"page"`
-	Size       int   `json:"size"`
-	TotalPages int   `json:"total_pages"`
-}
+// PaginatedResult is the shared offset pagination type.
+type PaginatedResult[T any] = pagination.OffsetResult[T]
 
 func newPaginatedResult[T any](data []T, total int64, page, size int) PaginatedResult[T] {
-	tp := int(total) / size
-	if int(total)%size != 0 {
-		tp++
-	}
-	return PaginatedResult[T]{Data: data, Total: total, Page: page, Size: size, TotalPages: tp}
+	return pagination.NewOffsetResult(data, total, page, size)
 }
 
 func toClientResponse(c *domain.Client) ClientResponse {

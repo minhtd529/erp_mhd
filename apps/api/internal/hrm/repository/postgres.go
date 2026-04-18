@@ -170,7 +170,8 @@ func (r *Repo) List(ctx context.Context, f domain.ListEmployeesFilter) ([]*domai
 		idx++
 	}
 	if f.Q != "" {
-		where += fmt.Sprintf(" AND (full_name ILIKE $%d OR email ILIKE $%d)", idx, idx)
+		// Searches the combined trgm expression index: full_name + email
+		where += fmt.Sprintf(" AND (COALESCE(full_name,'') || ' ' || COALESCE(email,'')) ILIKE $%d", idx)
 		args = append(args, "%"+f.Q+"%")
 		idx++
 	}

@@ -167,3 +167,9 @@ func (m *mockTwoFARepo) IncrementLoginAttempts(_ context.Context, _ uuid.UUID) (
 }
 func (m *mockTwoFARepo) ResetLoginAttempts(_ context.Context, _ uuid.UUID) error { return nil }
 func (m *mockTwoFARepo) LockAccount(_ context.Context, _ uuid.UUID, _ time.Time) error { return nil }
+func (m *mockTwoFARepo) RespondToPushChallenge(_ context.Context, _ string, _ bool) error {
+	return nil
+}
+func (m *mockTwoFARepo) FindPushChallenge(_ context.Context, _ string) (*domain.TwoFactorChallenge, error) {
+	return m.challenge, m.findChallengeErr
+}

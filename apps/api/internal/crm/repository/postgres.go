@@ -156,7 +156,13 @@ func (r *Repo) List(ctx context.Context, f domain.ListClientsFilter) ([]*domain.
 		idx++
 	}
 	if f.Q != "" {
-		where += fmt.Sprintf(" AND (business_name ILIKE $%d OR tax_code ILIKE $%d)", idx, idx)
+		// Searches the combined trgm expression index: business_name + english_name + tax_code + representative_name
+		where += fmt.Sprintf(` AND (
+			COALESCE(business_name,'') || ' ' ||
+			COALESCE(english_name, '') || ' ' ||
+			COALESCE(tax_code,     '') || ' ' ||
+			COALESCE(representative_name,'')
+		) ILIKE $%d`, idx)
 		args = append(args, "%"+f.Q+"%")
 		idx++
 	}
