@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "ERP Audit",
+    "slug": "erp-audit",
+    "version": "1.0.0",
+    "scheme": "erp-audit",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1F3A70"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.erpaudit.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1F3A70"
+      },
+      "package": "com.erpaudit.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
