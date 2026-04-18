@@ -83,12 +83,13 @@ func (uc *VerifyBackupCodeUseCase) Execute(ctx context.Context, req VerifyBackup
 	}
 
 	claims := pkgauth.TokenClaims{
-		UserID:       user.ID,
-		Email:        user.Email,
-		Roles:        user.Roles,
-		Permissions:  user.Permissions,
-		BranchID:     user.BranchID,
-		DepartmentID: user.DepartmentID,
+		UserID:        user.ID,
+		Email:         user.Email,
+		Roles:         user.Roles,
+		Permissions:   user.Permissions,
+		BranchID:      user.BranchID,
+		DepartmentID:  user.DepartmentID,
+		TwoFAVerified: true,
 	}
 
 	accessToken, err := uc.jwtSvc.IssueAccessToken(claims)
@@ -111,7 +112,7 @@ func (uc *VerifyBackupCodeUseCase) Execute(ctx context.Context, req VerifyBackup
 	_ = uc.users.UpdateLastLogin(ctx, user.ID)
 
 	if uc.auditLog != nil {
-		_ = uc.auditLog.Log(ctx, audit.Entry{
+		_, _ = uc.auditLog.Log(ctx, audit.Entry{
 			UserID:     &user.ID,
 			Module:     "global",
 			Resource:   "users",

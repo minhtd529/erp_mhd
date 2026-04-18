@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -248,3 +249,104 @@ func (m *mockLineItemRepoMulti) ListByInvoice(_ context.Context, _ uuid.UUID) ([
 	return m.items, nil
 }
 func (m *mockLineItemRepoMulti) Delete(_ context.Context, _ uuid.UUID) error { return nil }
+
+// capturingLineItemRepo records AddLineItemParams for snapshot verification.
+type capturingLineItemRepo struct {
+	captured []domain.AddLineItemParams
+}
+
+func (c *capturingLineItemRepo) Add(_ context.Context, p domain.AddLineItemParams) (*domain.InvoiceLineItem, error) {
+	c.captured = append(c.captured, p)
+	return &domain.InvoiceLineItem{
+		ID: uuid.New(), Description: p.Description,
+		Quantity: p.Quantity, UnitPrice: p.UnitPrice,
+		TotalAmount: p.TotalAmount, SourceType: p.SourceType,
+		SnapshotData: p.SnapshotData, CreatedAt: time.Now(),
+	}, nil
+}
+func (c *capturingLineItemRepo) FindByID(_ context.Context, _ uuid.UUID) (*domain.InvoiceLineItem, error) {
+	return nil, nil
+}
+func (c *capturingLineItemRepo) ListByInvoice(_ context.Context, _ uuid.UUID) ([]*domain.InvoiceLineItem, error) {
+	items := make([]*domain.InvoiceLineItem, len(c.captured))
+	for i, p := range c.captured {
+		items[i] = &domain.InvoiceLineItem{
+			ID: uuid.New(), TotalAmount: p.TotalAmount, SourceType: p.SourceType,
+			SnapshotData: p.SnapshotData, CreatedAt: time.Now(),
+		}
+	}
+	return items, nil
+}
+func (c *capturingLineItemRepo) Delete(_ context.Context, _ uuid.UUID) error { return nil }
+
+// TestGenerateUseCase_NoDataDrift verifies that T&M invoice generation snapshots
+// the exact locked-timesheet hours into each line item, so later edits to the
+// timesheet cannot alter the already-generated invoice.
+func TestGenerateUseCase_NoDataDrift(t *testing.T) {
+	t.Parallel()
+	callerID := uuid.New()
+	eng := newEngagement(engdomain.FeeTimeAndMaterial, 0)
+
+	staffID := uuid.New()
+	rate := 750_000.0
+
+	members := []*engdomain.EngagementMember{
+		{StaffID: staffID, HourlyRate: &rate},
+	}
+	// Exactly 6 locked hours for this staff member
+	entries := []*tsdomain.TimesheetEntry{
+		{ID: uuid.New(), CreatedBy: staffID, HoursWorked: 4, EngagementID: eng.ID, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: uuid.New(), CreatedBy: staffID, HoursWorked: 2, EngagementID: eng.ID, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	}
+
+	inv := newInvoice(domain.InvoiceStatusDraft)
+	inv.EngagementID = &eng.ID
+	inv.ClientID = eng.ClientID
+	invRepo := &mockInvoiceRepo{created: inv, updated: inv, found: inv}
+	lineRepo := &capturingLineItemRepo{}
+	engSource := &mockEngSource{eng: eng, members: members}
+	tsSource := &mockTSSource{entries: entries}
+
+	uc := usecase.NewGenerateUseCase(invRepo, lineRepo, engSource, tsSource, nil)
+	resp, err := uc.GenerateFromEngagement(context.Background(), usecase.GenerateFromEngagementRequest{
+		EngagementID:  eng.ID,
+		InvoiceNumber: "INV-DRIFT-001",
+		PeriodStart:   time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+		PeriodEnd:     time.Date(2026, 4, 30, 0, 0, 0, 0, time.UTC),
+	}, callerID, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should produce exactly 1 line item for staffID (6h @ 750_000)
+	if len(resp.LineItems) != 1 {
+		t.Fatalf("want 1 line item, got %d", len(resp.LineItems))
+	}
+	li := resp.LineItems[0]
+
+	// Total must be 6h × 750_000 = 4_500_000 — no drift from unlocked entries
+	want := 6.0 * rate
+	if li.TotalAmount != want {
+		t.Errorf("total amount: want %.0f, got %.0f", want, li.TotalAmount)
+	}
+
+	// Snapshot must capture the exact hours used at generation time
+	var snap map[string]any
+	if err := json.Unmarshal(lineRepo.captured[0].SnapshotData, &snap); err != nil {
+		t.Fatalf("snapshot not valid JSON: %v", err)
+	}
+	snapHours, ok := snap["hours"].(float64)
+	if !ok {
+		t.Fatal("snapshot missing 'hours' field")
+	}
+	if snapHours != 6.0 {
+		t.Errorf("snapshot hours: want 6, got %v", snapHours)
+	}
+	snapRate, ok := snap["rate"].(float64)
+	if !ok {
+		t.Fatal("snapshot missing 'rate' field")
+	}
+	if snapRate != rate {
+		t.Errorf("snapshot rate: want %.0f, got %.0f", rate, snapRate)
+	}
+}

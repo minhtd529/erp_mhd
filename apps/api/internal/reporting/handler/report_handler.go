@@ -106,7 +106,7 @@ func (h *ReportHandler) MVRefreshStatus(c *gin.Context) {
 // RefreshMVs handles POST /admin/refresh-materialized-views (SUPER_ADMIN)
 func (h *ReportHandler) RefreshMVs(c *gin.Context) {
 	if err := h.uc.RefreshMaterializedViews(c.Request.Context()); err != nil {
-		c.JSON(http.StatusInternalServerError, errResp("MV_REFRESH_FAILED", err.Error()))
+		c.JSON(http.StatusInternalServerError, errResp("MV_REFRESH_FAILED", "Failed to refresh materialized views"))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "materialized views refreshed"})

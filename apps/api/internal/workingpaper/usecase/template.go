@@ -42,7 +42,7 @@ func (uc *TemplateUseCase) Create(ctx context.Context, req TemplateCreateRequest
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "audit_templates",
 		ResourceID: &tmpl.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -63,7 +63,7 @@ func (uc *TemplateUseCase) Update(ctx context.Context, id uuid.UUID, req Templat
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "audit_templates",
 		ResourceID: &id, Action: "UPDATE", IPAddress: ip,
 	})
@@ -76,7 +76,7 @@ func (uc *TemplateUseCase) Retire(ctx context.Context, id uuid.UUID, callerID uu
 	if err := uc.templateRepo.Retire(ctx, id, callerID); err != nil {
 		return err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "audit_templates",
 		ResourceID: &id, Action: "DELETE", IPAddress: ip,
 	})
@@ -119,7 +119,7 @@ func (uc *TemplateUseCase) ApplyToEngagement(ctx context.Context, templateID uui
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_papers",
 		ResourceID: &wp.ID, Action: "CREATE", IPAddress: ip,
 		NewValue: map[string]string{"from_template": templateID.String()},

@@ -11,7 +11,9 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/mdh/erp-audit/api/pkg/config"
 	"github.com/mdh/erp-audit/api/pkg/database"
+	"github.com/mdh/erp-audit/api/pkg/notification"
 	"github.com/mdh/erp-audit/api/pkg/outbox"
+	"github.com/mdh/erp-audit/api/pkg/push"
 	"github.com/mdh/erp-audit/api/pkg/worker"
 	"github.com/redis/go-redis/v9"
 )
@@ -34,17 +36,22 @@ func main() {
 	}
 	redisAddr := redisOpts.Addr
 
+	// ── Push notification setup ───────────────────────────────────────────────
+	pushRelay := push.NewRelay()
+	pushDeviceRepo := push.NewDeviceRepo(db.Pool)
+	pushNotifier := notification.New(pushDeviceRepo, pushRelay)
+
 	// ── Asynq worker server ───────────────────────────────────────────────────
 	srv := worker.New(worker.Config{
 		RedisAddr:   redisAddr,
 		Concurrency: 10,
 		Queue:       "events",
 	})
-	srv.Register(outbox.EventTimesheetSubmitted, worker.HandleTimesheetSubmitted)
-	srv.Register(outbox.EventTimesheetApproved, worker.HandleTimesheetApproved)
-	srv.Register(outbox.EventTimesheetRejected, worker.HandleTimesheetRejected)
-	srv.Register(outbox.EventTimesheetLocked, worker.HandleTimesheetLocked)
-	srv.Register(outbox.EventEngagementActivated, worker.HandleEngagementActivated)
+	srv.Register(outbox.EventTimesheetSubmitted, worker.NewTimesheetSubmittedHandler(pushNotifier))
+	srv.Register(outbox.EventTimesheetApproved, worker.NewTimesheetApprovedHandler(pushNotifier))
+	srv.Register(outbox.EventTimesheetRejected, worker.NewTimesheetRejectedHandler(pushNotifier))
+	srv.Register(outbox.EventTimesheetLocked, worker.NewTimesheetLockedHandler(pushNotifier))
+	srv.Register(outbox.EventEngagementActivated, worker.NewEngagementActivatedHandler(pushNotifier))
 
 	// ── Outbox poller ─────────────────────────────────────────────────────────
 	asynqClient := asynq.NewClient(asynq.RedisClientOpt{Addr: redisAddr})

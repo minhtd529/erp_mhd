@@ -52,7 +52,7 @@ func (uc *VerifySetupUseCase) Execute(ctx context.Context, userID uuid.UUID, cod
 
 	// Audit
 	if uc.auditLog != nil {
-		_ = uc.auditLog.Log(ctx, audit.Entry{
+		_, _ = uc.auditLog.Log(ctx, audit.Entry{
 			UserID:     &userID,
 			Module:     "global",
 			Resource:   "users",

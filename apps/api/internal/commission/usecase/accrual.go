@@ -164,9 +164,9 @@ func (uc *AccrualUseCase) ClawbackOnInvoiceCancelled(ctx context.Context, invoic
 			}
 			return err
 		}
-		_ = uc.auditLog.Log(ctx, audit.Entry{
+		_, _ = uc.auditLog.Log(ctx, audit.Entry{
 			Module: "commission", Resource: "commission_record",
-			Action:   "auto_clawback",
+			Action:   "AUTO_CLAWBACK",
 			NewValue: map[string]string{"original_id": orig.ID.String(), "reason": "invoice cancelled"},
 		})
 	}
@@ -208,9 +208,9 @@ func (uc *AccrualUseCase) createRecord(
 		return err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		Module: "commission", Resource: "commission_record", ResourceID: &created.ID,
-		Action:   "accrue",
+		Action:   "ACCRUE",
 		NewValue: created,
 	})
 	return nil

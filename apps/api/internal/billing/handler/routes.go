@@ -33,6 +33,7 @@ func RegisterRoutes(
 		invoices.POST("/:id/send", requirePartner, invoiceH.Send)
 		invoices.POST("/:id/confirm", requirePartner, invoiceH.Confirm)
 		invoices.POST("/:id/issue", requirePartner, invoiceH.Issue)
+		invoices.POST("/:id/cancel", requirePartner, invoiceH.Cancel)
 
 		// Line items
 		invoices.GET("/:id/line-items", requireStaff, invoiceH.ListLineItems)
@@ -74,11 +75,13 @@ func RegisterRoutes(
 	{
 		reports.GET("/period-summary", requireManager, reportH.PeriodSummary)
 		reports.GET("/payment-summary", requireManager, reportH.PaymentSummary)
+		// Export period summary as XLSX: GET /billing/reports/period-summary/export?format=xlsx&start=&end=
+		reports.GET("/period-summary/export", requireManager, reportH.ExportPeriodSummary)
 	}
 
-	// Invoice export
+	// Invoice export (CSV or XLSX via ?format= param)
 	invoiceExport := v1.Group("/invoices", authMW)
 	{
-		invoiceExport.GET("/export", requireManager, reportH.ExportInvoicesCSV)
+		invoiceExport.GET("/export", requireManager, reportH.ExportInvoices)
 	}
 }

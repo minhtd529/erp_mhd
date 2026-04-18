@@ -48,10 +48,10 @@ func (uc *AdvisoryUseCase) Create(ctx context.Context, clientID uuid.UUID, req C
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "tax", Resource: "advisory_record", ResourceID: &a.ID,
-		Action: "create", NewValue: a,
+		Action: "CREATE", NewValue: a,
 	})
 	return a, nil
 }
@@ -89,10 +89,10 @@ func (uc *AdvisoryUseCase) Update(ctx context.Context, id uuid.UUID, req UpdateA
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "tax", Resource: "advisory_record", ResourceID: &a.ID,
-		Action: "update", NewValue: a,
+		Action: "UPDATE", NewValue: a,
 	})
 	return a, nil
 }
@@ -102,10 +102,10 @@ func (uc *AdvisoryUseCase) Deliver(ctx context.Context, id uuid.UUID, callerID u
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "tax", Resource: "advisory_record", ResourceID: &a.ID,
-		Action: "deliver", NewValue: map[string]string{"status": "DELIVERED"},
+		Action: "DELIVER", NewValue: map[string]string{"status": "DELIVERED"},
 	})
 	return a, nil
 }
@@ -120,10 +120,10 @@ func (uc *AdvisoryUseCase) AttachFile(ctx context.Context, id uuid.UUID, req Att
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "tax", Resource: "advisory_file", ResourceID: &f.ID,
-		Action: "attach_file", NewValue: f,
+		Action: "ATTACH_FILE", NewValue: f,
 	})
 	return f, nil
 }

@@ -283,3 +283,33 @@ func TestEmployeeUseCase_List(t *testing.T) {
 		t.Errorf("want 2 items, got %d", len(result.Data))
 	}
 }
+
+func TestEmployeeUseCase_List_IsSalesperson(t *testing.T) {
+	t.Parallel()
+
+	trueBool := true
+	salesperson := &domain.Employee{
+		ID:            uuid.New(),
+		FullName:      "Sales Person",
+		Email:         "sales@firm.com",
+		Grade:         domain.GradeSenior,
+		Status:        domain.StatusActive,
+		IsSalesperson: true,
+	}
+
+	uc := usecase.NewEmployeeUseCase(&mockEmployeeRepo{listItems: []*domain.Employee{salesperson}, listTotal: 1}, nil, "")
+	result, err := uc.List(context.Background(), usecase.EmployeeListRequest{
+		Page:          1,
+		Size:          20,
+		IsSalesperson: &trueBool,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 1 {
+		t.Errorf("want 1 salesperson result, got %d", result.Total)
+	}
+	if !result.Data[0].IsSalesperson {
+		t.Error("expected is_salesperson to be true")
+	}
+}

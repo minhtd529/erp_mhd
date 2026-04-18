@@ -41,7 +41,7 @@ func (uc *EngagementUseCase) Create(ctx context.Context, req EngagementCreateReq
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "engagements",
 		ResourceID: &e.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -81,7 +81,7 @@ func (uc *EngagementUseCase) Update(ctx context.Context, id uuid.UUID, req Engag
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "engagements",
 		ResourceID: &id, Action: "UPDATE", IPAddress: ip,
 	})
@@ -94,7 +94,7 @@ func (uc *EngagementUseCase) Delete(ctx context.Context, id uuid.UUID, callerID 
 	if err := uc.repo.SoftDelete(ctx, id, callerID); err != nil {
 		return err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "engagements",
 		ResourceID: &id, Action: "DELETE", IPAddress: ip,
 	})
@@ -103,11 +103,16 @@ func (uc *EngagementUseCase) Delete(ctx context.Context, id uuid.UUID, callerID 
 
 func (uc *EngagementUseCase) List(ctx context.Context, req EngagementListRequest) (PaginatedResult[EngagementResponse], error) {
 	items, total, err := uc.repo.List(ctx, domain.ListEngagementsFilter{
-		Page:     req.Page,
-		Size:     req.Size,
-		ClientID: req.ClientID,
-		Status:   req.Status,
-		Q:        req.Q,
+		Page:        req.Page,
+		Size:        req.Size,
+		ClientID:    req.ClientID,
+		Status:      req.Status,
+		Q:           req.Q,
+		ServiceType: req.ServiceType,
+		FeeType:     req.FeeType,
+		PartnerID:   req.PartnerID,
+		DateFrom:    req.DateFrom,
+		DateTo:      req.DateTo,
 	})
 	if err != nil {
 		return PaginatedResult[EngagementResponse]{}, fmt.Errorf("engagement.List: %w", err)
@@ -123,10 +128,15 @@ func (uc *EngagementUseCase) List(ctx context.Context, req EngagementListRequest
 // decodes the position; otherwise it starts from the beginning.
 func (uc *EngagementUseCase) ListCursor(ctx context.Context, req EngagementCursorListRequest) (EngagementCursorResult, error) {
 	f := domain.CursorFilter{
-		Size:     req.Size,
-		ClientID: req.ClientID,
-		Status:   req.Status,
-		Q:        req.Q,
+		Size:        req.Size,
+		ClientID:    req.ClientID,
+		Status:      req.Status,
+		Q:           req.Q,
+		ServiceType: req.ServiceType,
+		FeeType:     req.FeeType,
+		PartnerID:   req.PartnerID,
+		DateFrom:    req.DateFrom,
+		DateTo:      req.DateTo,
 	}
 	if req.Cursor != "" {
 		c, err := pagination.DecodeCursor(req.Cursor)
@@ -195,7 +205,7 @@ func (uc *EngagementUseCase) transition(ctx context.Context, id uuid.UUID, next 
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "engagements",
 		ResourceID: &id, Action: action, IPAddress: ip,
 	})

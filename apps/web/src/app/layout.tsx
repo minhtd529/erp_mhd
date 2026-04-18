@@ -10,15 +10,13 @@ export const metadata: Metadata = {
   description: 'Hệ thống ERP cho Công ty Kiểm toán – Tư vấn Tài chính – Thuế',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi">
       <body className={inter.className}>
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );

@@ -55,7 +55,7 @@ func (h *PushHandler) RegisterDevice(c *gin.Context) {
 		OSVersion:   req.OSVersion,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse("REGISTER_FAILED", err.Error()))
+		c.JSON(http.StatusInternalServerError, errorResponse("REGISTER_FAILED", "Failed to register device"))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"device": dev})
@@ -76,7 +76,7 @@ func (h *PushHandler) UnregisterDevice(c *gin.Context) {
 		return
 	}
 	if err := h.deviceUC.UnregisterDevice(c.Request.Context(), *userID, req.DeviceToken); err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse("UNREGISTER_FAILED", err.Error()))
+		c.JSON(http.StatusInternalServerError, errorResponse("UNREGISTER_FAILED", "Failed to unregister device"))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "device unregistered"})
@@ -91,7 +91,7 @@ func (h *PushHandler) ListDevices(c *gin.Context) {
 	}
 	devices, err := h.deviceUC.ListDevices(c.Request.Context(), *userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse("INTERNAL_ERROR", err.Error()))
+		c.JSON(http.StatusInternalServerError, errorResponse("INTERNAL_ERROR", "An internal error occurred"))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"devices": devices})
@@ -107,7 +107,7 @@ func (h *PushHandler) Heartbeat(c *gin.Context) {
 		return
 	}
 	if err := h.deviceUC.Heartbeat(c.Request.Context(), req.DeviceToken); err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse("HEARTBEAT_FAILED", err.Error()))
+		c.JSON(http.StatusInternalServerError, errorResponse("HEARTBEAT_FAILED", "Heartbeat failed"))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
@@ -148,7 +148,7 @@ func (h *PushHandler) PushResponse(c *gin.Context) {
 			c.JSON(http.StatusNotFound, errorResponse("CHALLENGE_NOT_FOUND", "challenge not found or already responded"))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, errorResponse("RESPOND_FAILED", err.Error()))
+		c.JSON(http.StatusInternalServerError, errorResponse("RESPOND_FAILED", "Failed to record push response"))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "response recorded"})
@@ -163,7 +163,7 @@ func (h *PushHandler) PushStatus(c *gin.Context) {
 			c.JSON(http.StatusNotFound, errorResponse("CHALLENGE_NOT_FOUND", "challenge not found"))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, errorResponse("INTERNAL_ERROR", err.Error()))
+		c.JSON(http.StatusInternalServerError, errorResponse("INTERNAL_ERROR", "An internal error occurred"))
 		return
 	}
 	if tokens != nil {

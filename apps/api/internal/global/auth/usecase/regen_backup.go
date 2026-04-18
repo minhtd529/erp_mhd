@@ -65,7 +65,7 @@ func (uc *RegenBackupCodesUseCase) Execute(ctx context.Context, userID uuid.UUID
 	}
 
 	if uc.auditLog != nil {
-		_ = uc.auditLog.Log(ctx, audit.Entry{
+		_, _ = uc.auditLog.Log(ctx, audit.Entry{
 			UserID:     &userID,
 			Module:     "global",
 			Resource:   "users",

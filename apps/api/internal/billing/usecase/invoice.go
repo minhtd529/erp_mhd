@@ -53,7 +53,7 @@ func (uc *InvoiceUseCase) Create(ctx context.Context, req InvoiceCreateRequest, 
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "invoices",
 		ResourceID: &inv.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -85,7 +85,7 @@ func (uc *InvoiceUseCase) Update(ctx context.Context, id uuid.UUID, req InvoiceU
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "invoices",
 		ResourceID: &id, Action: "UPDATE", IPAddress: ip,
 	})
@@ -98,7 +98,7 @@ func (uc *InvoiceUseCase) Delete(ctx context.Context, id uuid.UUID, callerID uui
 	if err := uc.invoiceRepo.SoftDelete(ctx, id, callerID); err != nil {
 		return err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "invoices",
 		ResourceID: &id, Action: "DELETE", IPAddress: ip,
 	})
@@ -113,6 +113,33 @@ func (uc *InvoiceUseCase) Send(ctx context.Context, id uuid.UUID, callerID uuid.
 // Confirm transitions SENT → CONFIRMED.
 func (uc *InvoiceUseCase) Confirm(ctx context.Context, id uuid.UUID, callerID uuid.UUID, ip string) (*InvoiceResponse, error) {
 	return uc.transition(ctx, id, domain.InvoiceStatusConfirmed, callerID, ip)
+}
+
+// Cancel transitions DRAFT|SENT|CONFIRMED → CANCELLED and publishes invoice.cancelled event.
+func (uc *InvoiceUseCase) Cancel(ctx context.Context, id uuid.UUID, callerID uuid.UUID, ip string) (*InvoiceResponse, error) {
+	inv, err := uc.invoiceRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !validTransition(inv.Status, domain.InvoiceStatusCancelled) {
+		return nil, domain.ErrInvalidStateTransition
+	}
+	updated, err := uc.invoiceRepo.UpdateStatus(ctx, id, domain.InvoiceStatusCancelled, callerID)
+	if err != nil {
+		return nil, err
+	}
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
+		UserID: &callerID, Module: "billing", Resource: "invoices",
+		ResourceID: &id, Action: "CANCEL", IPAddress: ip,
+		NewValue: map[string]string{"status": "CANCELLED"},
+	})
+	if uc.publisher != nil {
+		_ = uc.publisher.Publish(ctx, "invoice", id, outbox.EventInvoiceCancelled, map[string]string{
+			"invoice_id": id.String(), "client_id": inv.ClientID.String(),
+		})
+	}
+	resp := toInvoiceResponse(updated)
+	return &resp, nil
 }
 
 // Issue transitions CONFIRMED → ISSUED, freezes snapshot, publishes outbox event.
@@ -143,7 +170,7 @@ func (uc *InvoiceUseCase) Issue(ctx context.Context, id uuid.UUID, callerID uuid
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "invoices",
 		ResourceID: &id, Action: "STATE_TRANSITION", IPAddress: ip,
 		NewValue: map[string]string{"status": "ISSUED"},
@@ -172,7 +199,7 @@ func (uc *InvoiceUseCase) transition(ctx context.Context, id uuid.UUID, newStatu
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "invoices",
 		ResourceID: &id, Action: "STATE_TRANSITION", IPAddress: ip,
 		NewValue: map[string]string{"status": string(newStatus)},
@@ -276,7 +303,7 @@ func (uc *InvoiceUseCase) AddLineItem(ctx context.Context, invoiceID uuid.UUID, 
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "invoice_line_items",
 		ResourceID: &item.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -308,7 +335,7 @@ func (uc *InvoiceUseCase) DeleteLineItem(ctx context.Context, invoiceID, itemID 
 	if err := uc.lineRepo.Delete(ctx, itemID); err != nil {
 		return err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "invoice_line_items",
 		ResourceID: &itemID, Action: "DELETE", IPAddress: ip,
 	})

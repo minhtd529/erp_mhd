@@ -26,12 +26,13 @@ func (h *TeamHandler) List(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid engagement ID"))
 		return
 	}
-	members, err := h.uc.List(c.Request.Context(), engID)
+	page, size := parsePageSize(c)
+	result, err := h.uc.List(c.Request.Context(), engID, usecase.MemberListRequest{Page: page, Size: size})
 	if err != nil {
 		h.handleErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": members})
+	c.JSON(http.StatusOK, result)
 }
 
 func (h *TeamHandler) Assign(c *gin.Context) {

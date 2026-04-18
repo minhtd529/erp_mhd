@@ -58,7 +58,7 @@ func (uc *MemoUseCase) Create(ctx context.Context, invoiceID uuid.UUID, req Memo
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "billing_memos",
 		ResourceID: &memo.ID, Action: "CREATE", IPAddress: ip,
 	})

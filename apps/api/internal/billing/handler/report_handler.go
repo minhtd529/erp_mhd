@@ -49,8 +49,9 @@ func (h *ReportHandler) PaymentSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// ExportInvoicesCSV handles GET /invoices/export?format=csv&status=ISSUED
-func (h *ReportHandler) ExportInvoicesCSV(c *gin.Context) {
+// ExportInvoices handles GET /invoices/export?format=csv|xlsx&status=ISSUED
+// format defaults to "csv". When format=xlsx an Excel workbook is returned.
+func (h *ReportHandler) ExportInvoices(c *gin.Context) {
 	var f domain.ListInvoicesFilter
 	if s := c.Query("status"); s != "" {
 		f.Status = domain.InvoiceStatus(s)
@@ -66,16 +67,49 @@ func (h *ReportHandler) ExportInvoicesCSV(c *gin.Context) {
 		}
 	}
 
-	data, err := h.uc.ExportInvoicesCSV(c.Request.Context(), f)
+	format := c.DefaultQuery("format", "csv")
+	switch format {
+	case "xlsx":
+		data, err := h.uc.ExportInvoicesXLSX(c.Request.Context(), f)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
+			return
+		}
+		filename := fmt.Sprintf("invoices_%s.xlsx", time.Now().Format("20060102"))
+		c.Header("Content-Disposition", "attachment; filename="+filename)
+		c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data)
+	default:
+		data, err := h.uc.ExportInvoicesCSV(c.Request.Context(), f)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
+			return
+		}
+		filename := fmt.Sprintf("invoices_%s.csv", time.Now().Format("20060102"))
+		c.Header("Content-Disposition", "attachment; filename="+filename)
+		c.Header("Content-Type", "text/csv; charset=utf-8")
+		c.Data(http.StatusOK, "text/csv", data)
+	}
+}
+
+// ExportPeriodSummary handles GET /billing/reports/period-summary/export?format=xlsx&start=&end=
+func (h *ReportHandler) ExportPeriodSummary(c *gin.Context) {
+	start, end, ok := parsePeriod(c)
+	if !ok {
+		return
+	}
+	format := c.DefaultQuery("format", "xlsx")
+	if format != "xlsx" {
+		c.JSON(http.StatusBadRequest, errResp("VALIDATION_ERROR", "Supported formats: xlsx"))
+		return
+	}
+	data, err := h.uc.ExportPeriodSummaryXLSX(c.Request.Context(), usecase.PeriodSummaryRequest{Start: start, End: end})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
 		return
 	}
-
-	filename := fmt.Sprintf("invoices_%s.csv", time.Now().Format("20060102"))
+	filename := fmt.Sprintf("billing_summary_%s_%s.xlsx", start.Format("20060102"), end.Format("20060102"))
 	c.Header("Content-Disposition", "attachment; filename="+filename)
-	c.Header("Content-Type", "text/csv; charset=utf-8")
-	c.Data(http.StatusOK, "text/csv", data)
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data)
 }
 
 // parsePeriod extracts and validates start/end query params.

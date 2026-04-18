@@ -63,7 +63,7 @@ func (uc *CreateUserUseCase) Execute(
 
 	// 4. Emit audit log (best-effort)
 	if uc.auditLog != nil {
-		_ = uc.auditLog.Log(ctx, audit.Entry{
+		_, _ = uc.auditLog.Log(ctx, audit.Entry{
 			UserID:     createdBy,
 			Module:     "global",
 			Resource:   "users",

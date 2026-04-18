@@ -52,10 +52,10 @@ func (uc *RecordUseCase) Approve(ctx context.Context, id uuid.UUID, callerID uui
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "commission_record", ResourceID: &updated.ID,
-		Action: "approve", NewValue: map[string]string{"status": "approved"},
+		Action: "APPROVE", NewValue: map[string]string{"status": "approved"},
 	})
 	r := toRecordResponse(updated)
 	return &r, nil
@@ -75,10 +75,10 @@ func (uc *RecordUseCase) MarkPaid(ctx context.Context, id uuid.UUID, payoutRef s
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "commission_record", ResourceID: &updated.ID,
-		Action: "mark_paid", NewValue: map[string]string{"status": "paid", "payout_reference": payoutRef},
+		Action: "MARK_PAID", NewValue: map[string]string{"status": "paid", "payout_reference": payoutRef},
 	})
 	r := toRecordResponse(updated)
 	return &r, nil
@@ -102,10 +102,10 @@ func (uc *RecordUseCase) BulkApprove(ctx context.Context, req BulkApproveRequest
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "commission_record",
-		Action: "bulk_approve", NewValue: map[string]any{"count": n},
+		Action: "BULK_APPROVE", NewValue: map[string]any{"count": n},
 	})
 	return &BulkResult{AffectedCount: n}, nil
 }
@@ -115,10 +115,10 @@ func (uc *RecordUseCase) BulkPay(ctx context.Context, req BulkPayRequest, caller
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "commission_record",
-		Action: "bulk_pay", NewValue: map[string]any{"count": n, "payout_reference": req.PayoutReference},
+		Action: "BULK_PAY", NewValue: map[string]any{"count": n, "payout_reference": req.PayoutReference},
 	})
 	return &BulkResult{AffectedCount: n}, nil
 }
@@ -154,10 +154,10 @@ func (uc *RecordUseCase) Clawback(ctx context.Context, id uuid.UUID, reason stri
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "commission_record", ResourceID: &created.ID,
-		Action: "clawback", NewValue: map[string]string{"original_id": id.String(), "reason": reason},
+		Action: "CLAWBACK", NewValue: map[string]string{"original_id": id.String(), "reason": reason},
 	})
 	r := toRecordResponse(created)
 	return &r, nil

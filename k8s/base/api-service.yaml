@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: erp-audit-api
+  namespace: erp-audit
+  labels:
+    app: erp-audit-api
+spec:
+  type: ClusterIP
+  selector:
+    app: erp-audit-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

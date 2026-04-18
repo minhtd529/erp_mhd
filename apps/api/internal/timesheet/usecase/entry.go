@@ -69,7 +69,7 @@ func (uc *EntryUseCase) Create(ctx context.Context, timesheetID uuid.UUID, req E
 
 	_ = uc.tsRepo.UpdateTotalHours(ctx, timesheetID)
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "timesheet", Resource: "timesheet_entries",
 		ResourceID: &e.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -103,7 +103,7 @@ func (uc *EntryUseCase) Update(ctx context.Context, timesheetID uuid.UUID, entry
 
 	_ = uc.tsRepo.UpdateTotalHours(ctx, timesheetID)
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "timesheet", Resource: "timesheet_entries",
 		ResourceID: &entryID, Action: "UPDATE", IPAddress: ip,
 	})
@@ -128,7 +128,7 @@ func (uc *EntryUseCase) Delete(ctx context.Context, timesheetID uuid.UUID, entry
 
 	_ = uc.tsRepo.UpdateTotalHours(ctx, timesheetID)
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "timesheet", Resource: "timesheet_entries",
 		ResourceID: &entryID, Action: "DELETE", IPAddress: ip,
 	})

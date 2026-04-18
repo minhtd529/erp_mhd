@@ -69,12 +69,13 @@ func (uc *Push2FAUseCase) GetPushStatus(ctx context.Context, challengeID string)
 	}
 
 	claims := pkgauth.TokenClaims{
-		UserID:       user.ID,
-		Email:        user.Email,
-		Roles:        user.Roles,
-		Permissions:  user.Permissions,
-		BranchID:     user.BranchID,
-		DepartmentID: user.DepartmentID,
+		UserID:        user.ID,
+		Email:         user.Email,
+		Roles:         user.Roles,
+		Permissions:   user.Permissions,
+		BranchID:      user.BranchID,
+		DepartmentID:  user.DepartmentID,
+		TwoFAVerified: true,
 	}
 	accessToken, err := uc.jwt.IssueAccessToken(claims)
 	if err != nil {

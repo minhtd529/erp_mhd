@@ -10,6 +10,7 @@ import (
 	"github.com/mdh/erp-audit/api/internal/workingpaper/usecase"
 )
 
+
 // ReviewHandler handles working paper review endpoints.
 type ReviewHandler struct {
 	uc *usecase.ReviewUseCase
@@ -26,12 +27,13 @@ func (h *ReviewHandler) ListReviews(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid working paper ID"))
 		return
 	}
-	reviews, err := h.uc.ListReviews(c.Request.Context(), wpID)
+	page, size := parsePageSize(c)
+	result, err := h.uc.ListReviews(c.Request.Context(), wpID, usecase.ReviewListRequest{Page: page, Size: size})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
 		return
 	}
-	c.JSON(http.StatusOK, reviews)
+	c.JSON(http.StatusOK, result)
 }
 
 func (h *ReviewHandler) Approve(c *gin.Context) {
@@ -103,12 +105,13 @@ func (h *ReviewHandler) ListComments(c *gin.Context) {
 		return
 	}
 	role := domain.ReviewerRole(c.Param("role"))
-	comments, err := h.uc.ListComments(c.Request.Context(), wpID, role)
+	page, size := parsePageSize(c)
+	result, err := h.uc.ListComments(c.Request.Context(), wpID, role, usecase.CommentListRequest{Page: page, Size: size})
 	if err != nil {
 		mapReviewErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, comments)
+	c.JSON(http.StatusOK, result)
 }
 
 func (h *ReviewHandler) ResolveComment(c *gin.Context) {

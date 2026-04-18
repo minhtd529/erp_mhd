@@ -41,7 +41,7 @@ func (uc *WorkingPaperUseCase) Create(ctx context.Context, engagementID uuid.UUI
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_papers",
 		ResourceID: &wp.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -60,6 +60,14 @@ func (uc *WorkingPaperUseCase) GetByID(ctx context.Context, id uuid.UUID) (*WPRe
 }
 
 func (uc *WorkingPaperUseCase) Update(ctx context.Context, id uuid.UUID, req WPUpdateRequest, callerID uuid.UUID, ip string) (*WPResponse, error) {
+	existing, err := uc.wpRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if existing.Status == domain.WPStatusFinalized || existing.Status == domain.WPStatusSignedOff {
+		return nil, domain.ErrWorkingPaperNotEditable
+	}
+
 	wp, err := uc.wpRepo.Update(ctx, domain.UpdateWPParams{
 		ID:        id,
 		Title:     req.Title,
@@ -71,7 +79,7 @@ func (uc *WorkingPaperUseCase) Update(ctx context.Context, id uuid.UUID, req WPU
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_papers",
 		ResourceID: &id, Action: "UPDATE", IPAddress: ip,
 	})
@@ -84,7 +92,7 @@ func (uc *WorkingPaperUseCase) Delete(ctx context.Context, id uuid.UUID, callerI
 	if err := uc.wpRepo.SoftDelete(ctx, id, callerID); err != nil {
 		return err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_papers",
 		ResourceID: &id, Action: "DELETE", IPAddress: ip,
 	})
@@ -114,7 +122,7 @@ func (uc *WorkingPaperUseCase) SubmitForReview(ctx context.Context, id uuid.UUID
 		})
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_papers",
 		ResourceID: &id, Action: "STATE_TRANSITION", IPAddress: ip,
 		NewValue: map[string]string{"status": "IN_REVIEW"},
@@ -172,7 +180,7 @@ func (uc *WorkingPaperUseCase) Finalize(ctx context.Context, id uuid.UUID, calle
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_papers",
 		ResourceID: &id, Action: "STATE_TRANSITION", IPAddress: ip,
 		NewValue: map[string]string{"status": "FINALIZED"},
@@ -197,7 +205,7 @@ func (uc *WorkingPaperUseCase) SignOff(ctx context.Context, id uuid.UUID, caller
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_papers",
 		ResourceID: &id, Action: "APPROVE", IPAddress: ip,
 		NewValue: map[string]string{"status": "SIGNED_OFF"},

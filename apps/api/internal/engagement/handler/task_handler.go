@@ -26,13 +26,17 @@ func (h *TaskHandler) List(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid engagement ID"))
 		return
 	}
-	phase := domain.TaskPhase(c.Query("phase"))
-	tasks, err := h.uc.List(c.Request.Context(), engID, phase)
+	page, size := parsePageSize(c)
+	result, err := h.uc.List(c.Request.Context(), engID, usecase.TaskListRequest{
+		Phase: domain.TaskPhase(c.Query("phase")),
+		Page:  page,
+		Size:  size,
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": tasks})
+	c.JSON(http.StatusOK, result)
 }
 
 func (h *TaskHandler) Create(c *gin.Context) {

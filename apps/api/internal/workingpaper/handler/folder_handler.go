@@ -8,6 +8,7 @@ import (
 	"github.com/mdh/erp-audit/api/internal/workingpaper/usecase"
 )
 
+
 // FolderHandler handles working paper folder endpoints.
 type FolderHandler struct {
 	uc *usecase.FolderUseCase
@@ -47,10 +48,11 @@ func (h *FolderHandler) List(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid engagement ID"))
 		return
 	}
-	folders, err := h.uc.ListByEngagement(c.Request.Context(), engID)
+	page, size := parsePageSize(c)
+	result, err := h.uc.ListByEngagement(c.Request.Context(), engID, usecase.FolderListRequest{Page: page, Size: size})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
 		return
 	}
-	c.JSON(http.StatusOK, folders)
+	c.JSON(http.StatusOK, result)
 }

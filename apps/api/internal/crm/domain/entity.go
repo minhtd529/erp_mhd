@@ -120,8 +120,11 @@ type UpdateClientParams struct {
 
 // ListClientsFilter controls pagination and filtering for the list query.
 type ListClientsFilter struct {
-	Page   int
-	Size   int
-	Status ClientStatus
-	Q      string // free-text search on business_name / tax_code
+	Page         int
+	Size         int
+	Status       ClientStatus
+	Q            string     // full-text search (tsvector @@ plainto_tsquery)
+	SalesOwnerID *uuid.UUID // filter by sales owner employee
+	Industry     *string    // exact match on industry
+	OfficeID     *uuid.UUID // filter by office
 }

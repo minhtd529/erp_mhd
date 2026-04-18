@@ -3,8 +3,9 @@ package domain
 import "errors"
 
 var (
-	ErrWorkingPaperNotFound   = errors.New("WORKING_PAPER_NOT_FOUND")
-	ErrWorkingPaperLocked     = errors.New("WORKING_PAPER_LOCKED")
+	ErrWorkingPaperNotFound    = errors.New("WORKING_PAPER_NOT_FOUND")
+	ErrWorkingPaperLocked      = errors.New("WORKING_PAPER_LOCKED")
+	ErrWorkingPaperNotEditable = errors.New("WORKING_PAPER_NOT_EDITABLE")
 	ErrInvalidStateTransition = errors.New("INVALID_STATE_TRANSITION")
 	ErrReviewChainIncomplete  = errors.New("REVIEW_CHAIN_INCOMPLETE")
 	ErrInvalidReviewSequence  = errors.New("INVALID_REVIEW_SEQUENCE")

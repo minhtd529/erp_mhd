@@ -52,7 +52,7 @@ func (uc *AssignRoleUseCase) Execute(
 
 	// Emit audit log (best-effort)
 	if uc.auditLog != nil {
-		_ = uc.auditLog.Log(ctx, audit.Entry{
+		_, _ = uc.auditLog.Log(ctx, audit.Entry{
 			UserID:     assignedBy,
 			Module:     "global",
 			Resource:   "user_roles",

@@ -44,7 +44,7 @@ func (uc *ClientUseCase) Create(ctx context.Context, req ClientCreateRequest, ca
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "clients",
@@ -90,7 +90,7 @@ func (uc *ClientUseCase) Update(ctx context.Context, id uuid.UUID, req ClientUpd
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "clients",
@@ -109,7 +109,7 @@ func (uc *ClientUseCase) Delete(ctx context.Context, id uuid.UUID, callerID uuid
 		return err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "clients",
@@ -124,10 +124,13 @@ func (uc *ClientUseCase) Delete(ctx context.Context, id uuid.UUID, callerID uuid
 // List returns a paginated list of clients.
 func (uc *ClientUseCase) List(ctx context.Context, req ClientListRequest) (PaginatedResult[ClientResponse], error) {
 	clients, total, err := uc.repo.List(ctx, domain.ListClientsFilter{
-		Page:   req.Page,
-		Size:   req.Size,
-		Status: req.Status,
-		Q:      req.Q,
+		Page:         req.Page,
+		Size:         req.Size,
+		Status:       req.Status,
+		Q:            req.Q,
+		SalesOwnerID: req.SalesOwnerID,
+		Industry:     req.Industry,
+		OfficeID:     req.OfficeID,
 	})
 	if err != nil {
 		return PaginatedResult[ClientResponse]{}, fmt.Errorf("crm.List: %w", err)

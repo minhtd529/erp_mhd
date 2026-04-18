@@ -169,11 +169,16 @@ func (r *Repo) List(ctx context.Context, f domain.ListEmployeesFilter) ([]*domai
 		args = append(args, f.OfficeID)
 		idx++
 	}
-	if f.Q != "" {
-		// Searches the combined trgm expression index: full_name + email
-		where += fmt.Sprintf(" AND (COALESCE(full_name,'') || ' ' || COALESCE(email,'')) ILIKE $%d", idx)
-		args = append(args, "%"+f.Q+"%")
+	if f.IsSalesperson != nil {
+		where += fmt.Sprintf(" AND is_salesperson = $%d", idx)
+		args = append(args, *f.IsSalesperson)
 		idx++
+	}
+	if f.Q != "" {
+		// Use tsvector FTS with trgm ILIKE fallback
+		where += fmt.Sprintf(` AND (search_vector @@ plainto_tsquery('simple', $%d) OR (COALESCE(full_name,'') || ' ' || COALESCE(email,'')) ILIKE $%d)`, idx, idx+1)
+		args = append(args, f.Q, "%"+f.Q+"%")
+		idx += 2
 	}
 
 	var total int64

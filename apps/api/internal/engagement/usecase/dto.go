@@ -34,11 +34,16 @@ type EngagementUpdateRequest struct {
 }
 
 type EngagementListRequest struct {
-	Page     int                      `form:"page,default=1"  binding:"min=1"`
-	Size     int                      `form:"size,default=20" binding:"min=1,max=100"`
-	ClientID *uuid.UUID               `form:"client_id"`
-	Status   domain.EngagementStatus  `form:"status"`
-	Q        string                   `form:"q"`
+	Page        int                     `form:"page,default=1"  binding:"min=1"`
+	Size        int                     `form:"size,default=20" binding:"min=1,max=100"`
+	ClientID    *uuid.UUID              `form:"client_id"`
+	Status      domain.EngagementStatus `form:"status"`
+	Q           string                  `form:"q"`
+	ServiceType domain.ServiceType      `form:"service_type"`
+	FeeType     domain.FeeType          `form:"fee_type"`
+	PartnerID   *uuid.UUID              `form:"partner_id"`
+	DateFrom    *time.Time              `form:"date_from" time_format:"2006-01-02"`
+	DateTo      *time.Time              `form:"date_to"   time_format:"2006-01-02"`
 }
 
 type EngagementResponse struct {
@@ -161,11 +166,16 @@ func newPaginatedResult[T any](data []T, total int64, page, size int) PaginatedR
 
 // EngagementCursorListRequest is the body for cursor-paginated GET /engagements.
 type EngagementCursorListRequest struct {
-	Cursor   string                  `form:"cursor"`
-	Size     int                     `form:"size,default=20" binding:"min=1,max=100"`
-	ClientID *uuid.UUID              `form:"client_id"`
-	Status   domain.EngagementStatus `form:"status"`
-	Q        string                  `form:"q"`
+	Cursor      string                  `form:"cursor"`
+	Size        int                     `form:"size,default=20" binding:"min=1,max=100"`
+	ClientID    *uuid.UUID              `form:"client_id"`
+	Status      domain.EngagementStatus `form:"status"`
+	Q           string                  `form:"q"`
+	ServiceType domain.ServiceType      `form:"service_type"`
+	FeeType     domain.FeeType          `form:"fee_type"`
+	PartnerID   *uuid.UUID              `form:"partner_id"`
+	DateFrom    *time.Time              `form:"date_from" time_format:"2006-01-02"`
+	DateTo      *time.Time              `form:"date_to"   time_format:"2006-01-02"`
 }
 
 // CursorResult wraps cursor-paginated engagement results.

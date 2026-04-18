@@ -50,11 +50,12 @@ type EmployeeBankDetailsRequest struct {
 
 // EmployeeListRequest holds validated query parameters.
 type EmployeeListRequest struct {
-	Page     int                   `form:"page,default=1"  binding:"min=1"`
-	Size     int                   `form:"size,default=20" binding:"min=1,max=100"`
-	Status   domain.EmployeeStatus `form:"status"`
-	OfficeID *uuid.UUID            `form:"office_id"`
-	Q        string                `form:"q"`
+	Page          int                   `form:"page,default=1"  binding:"min=1"`
+	Size          int                   `form:"size,default=20" binding:"min=1,max=100"`
+	Status        domain.EmployeeStatus `form:"status"`
+	OfficeID      *uuid.UUID            `form:"office_id"`
+	Q             string                `form:"q"`
+	IsSalesperson *bool                 `form:"is_salesperson"`
 }
 
 // EmployeeResponse is the JSON representation of an employee.

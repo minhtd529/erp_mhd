@@ -57,6 +57,7 @@ import (
 	taxusecase "github.com/mdh/erp-audit/api/internal/tax/usecase"
 	taxworker "github.com/mdh/erp-audit/api/internal/tax/worker"
 
+	"github.com/mdh/erp-audit/api/pkg/notification"
 	"github.com/mdh/erp-audit/api/pkg/push"
 
 	reportinghandler "github.com/mdh/erp-audit/api/internal/reporting/handler"
@@ -65,7 +66,9 @@ import (
 	reportingworker "github.com/mdh/erp-audit/api/internal/reporting/worker"
 
 	"github.com/mdh/erp-audit/api/pkg/distlock"
+	"github.com/mdh/erp-audit/api/pkg/metrics"
 	"github.com/mdh/erp-audit/api/pkg/outbox"
+	"github.com/mdh/erp-audit/api/pkg/ratelimit"
 	"github.com/mdh/erp-audit/api/pkg/worker"
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
@@ -261,6 +264,7 @@ func main() {
 	pushDeviceUC := authusecase.NewPushDeviceUseCase(pushDeviceRepo)
 	push2FAUC := authusecase.NewPush2FAUseCase(repo, repo, repo, jwtSvc, pushRelay)
 	pushH := authhandler.NewPushHandler(pushDeviceUC, push2FAUC, pushRelay, pushDeviceRepo)
+	pushNotifier := notification.New(pushDeviceRepo, pushRelay)
 
 	// ── Reporting module ──────────────────────────────────────────────────────
 	repRepo := reportingrepo.NewReportingRepo(db.Pool)
@@ -269,12 +273,12 @@ func main() {
 	repDashH := reportinghandler.NewDashboardHandler(repDashUC)
 	repReportH := reportinghandler.NewReportHandler(repReportUC)
 
-	// Register event handlers
-	workerSrv.Register(outbox.EventTimesheetSubmitted, worker.HandleTimesheetSubmitted)
-	workerSrv.Register(outbox.EventTimesheetApproved, worker.HandleTimesheetApproved)
-	workerSrv.Register(outbox.EventTimesheetRejected, worker.HandleTimesheetRejected)
-	workerSrv.Register(outbox.EventTimesheetLocked, worker.HandleTimesheetLocked)
-	workerSrv.Register(outbox.EventEngagementActivated, worker.HandleEngagementActivated)
+	// Register event handlers — timesheet push notifications
+	workerSrv.Register(outbox.EventTimesheetSubmitted, worker.NewTimesheetSubmittedHandler(pushNotifier))
+	workerSrv.Register(outbox.EventTimesheetApproved, worker.NewTimesheetApprovedHandler(pushNotifier))
+	workerSrv.Register(outbox.EventTimesheetRejected, worker.NewTimesheetRejectedHandler(pushNotifier))
+	workerSrv.Register(outbox.EventTimesheetLocked, worker.NewTimesheetLockedHandler(pushNotifier))
+	workerSrv.Register(outbox.EventEngagementActivated, worker.NewEngagementActivatedHandler(pushNotifier))
 	// Tax deadline reminder job
 	workerSrv.Register(taxworker.TaskDeadlineReminder, taxworker.NewDeadlineReminderHandler(taxDeadlineUC))
 
@@ -295,6 +299,12 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(middleware.RequestLogger(l))
 	r.Use(middleware.CORS([]string{"*"}))
+	r.Use(ratelimit.New(redisClient).Middleware())
+	r.Use(metrics.Middleware())
+	r.Use(middleware.AuditIDMiddleware())
+
+	// Prometheus metrics (internal — restrict via network policy or ingress in production)
+	r.GET("/metrics", metrics.Handler())
 
 	// Health check (public)
 	r.GET("/health", func(c *gin.Context) {
@@ -306,8 +316,11 @@ func main() {
 	})
 
 	authMW := middleware.AuthMiddleware(jwtSvc)
+	require2FA := middleware.Require2FA()
 
 	v1 := r.Group("/api/v1")
+	// Apply 2FA enforcement globally; it only rejects FIRM_PARTNER/SUPER_ADMIN without 2fa_verified.
+	v1.Use(require2FA)
 	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, pushH, authMW)
 	crmhandler.RegisterRoutes(v1, clientH, contactH, authMW)
 	hrmhandler.RegisterRoutes(v1, employeeH, authMW)

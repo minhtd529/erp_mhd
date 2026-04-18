@@ -388,3 +388,114 @@ func TestReview_ResolveComment_notfound(t *testing.T) {
 	_, err := uc.ResolveComment(context.Background(), uuid.New(), uuid.New(), "127.0.0.1")
 	assert.ErrorIs(t, err, domain.ErrCommentNotFound)
 }
+
+func TestWP_Update_Immutable_AfterFinalized(t *testing.T) {
+	t.Parallel()
+	wpRepo := newFakeWPRepo()
+	revRepo := newFakeReviewRepo()
+	uc := usecase.NewWorkingPaperUseCase(wpRepo, revRepo, newAuditLogger())
+
+	caller := uuid.New()
+	engID := uuid.New()
+	created, _ := uc.Create(context.Background(), engID, usecase.WPCreateRequest{
+		DocumentType: domain.DocProcedures,
+		Title:        "Immutable WP",
+	}, caller, "127.0.0.1")
+
+	// Transition to FINALIZED
+	uc.SubmitForReview(context.Background(), created.ID, caller, "127.0.0.1")
+	revRepo.approveAll(created.ID)
+	_, err := uc.Finalize(context.Background(), created.ID, caller, "127.0.0.1")
+	require.NoError(t, err)
+
+	// Update on FINALIZED WP must be rejected
+	_, err = uc.Update(context.Background(), created.ID, usecase.WPUpdateRequest{Title: "Modified"}, caller, "127.0.0.1")
+	assert.ErrorIs(t, err, domain.ErrWorkingPaperNotEditable)
+}
+
+func TestWP_Update_Immutable_AfterSignedOff(t *testing.T) {
+	t.Parallel()
+	wpRepo := newFakeWPRepo()
+	revRepo := newFakeReviewRepo()
+	uc := usecase.NewWorkingPaperUseCase(wpRepo, revRepo, newAuditLogger())
+
+	caller := uuid.New()
+	engID := uuid.New()
+	created, _ := uc.Create(context.Background(), engID, usecase.WPCreateRequest{
+		DocumentType: domain.DocProcedures,
+		Title:        "WP to sign off",
+	}, caller, "127.0.0.1")
+
+	// Drive through to SIGNED_OFF
+	uc.SubmitForReview(context.Background(), created.ID, caller, "127.0.0.1")
+	revRepo.approveAll(created.ID)
+	uc.Finalize(context.Background(), created.ID, caller, "127.0.0.1")
+	_, err := uc.SignOff(context.Background(), created.ID, caller, "127.0.0.1")
+	require.NoError(t, err)
+
+	// Update on SIGNED_OFF WP must be rejected
+	_, err = uc.Update(context.Background(), created.ID, usecase.WPUpdateRequest{Title: "Tampered"}, caller, "127.0.0.1")
+	assert.ErrorIs(t, err, domain.ErrWorkingPaperNotEditable)
+}
+
+func TestWP_Update_Allowed_InDraft(t *testing.T) {
+	t.Parallel()
+	wpRepo := newFakeWPRepo()
+	revRepo := newFakeReviewRepo()
+	uc := usecase.NewWorkingPaperUseCase(wpRepo, revRepo, newAuditLogger())
+
+	caller := uuid.New()
+	engID := uuid.New()
+	created, _ := uc.Create(context.Background(), engID, usecase.WPCreateRequest{
+		DocumentType: domain.DocProcedures,
+		Title:        "Draft WP",
+	}, caller, "127.0.0.1")
+
+	resp, err := uc.Update(context.Background(), created.ID, usecase.WPUpdateRequest{Title: "Updated Draft"}, caller, "127.0.0.1")
+	require.NoError(t, err)
+	assert.Equal(t, "Updated Draft", resp.Title)
+}
+
+func TestWP_GetByID_HappyPath(t *testing.T) {
+	wpRepo := newFakeWPRepo()
+	revRepo := newFakeReviewRepo()
+	uc := usecase.NewWorkingPaperUseCase(wpRepo, revRepo, newAuditLogger())
+
+	caller := uuid.New()
+	engID := uuid.New()
+	created, _ := uc.Create(context.Background(), engID, usecase.WPCreateRequest{
+		DocumentType: domain.DocEvidence,
+		Title:        "GetByID test",
+	}, caller, "127.0.0.1")
+
+	resp, err := uc.GetByID(context.Background(), created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, created.ID, resp.ID)
+	assert.Equal(t, "GetByID test", resp.Title)
+}
+
+func TestWP_GetByID_NotFound(t *testing.T) {
+	wpRepo := newFakeWPRepo()
+	uc := usecase.NewWorkingPaperUseCase(wpRepo, newFakeReviewRepo(), newAuditLogger())
+
+	_, err := uc.GetByID(context.Background(), uuid.New())
+	assert.ErrorIs(t, err, domain.ErrWorkingPaperNotFound)
+}
+
+func TestWP_List_ReturnsAll(t *testing.T) {
+	wpRepo := newFakeWPRepo()
+	uc := usecase.NewWorkingPaperUseCase(wpRepo, newFakeReviewRepo(), newAuditLogger())
+
+	caller := uuid.New()
+	engID := uuid.New()
+	for i := 0; i < 3; i++ {
+		_, _ = uc.Create(context.Background(), engID, usecase.WPCreateRequest{
+			DocumentType: domain.DocProcedures,
+			Title:        "WP",
+		}, caller, "127.0.0.1")
+	}
+
+	result, err := uc.List(context.Background(), engID, usecase.WPListRequest{Page: 1, Size: 20})
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(result.Data))
+}

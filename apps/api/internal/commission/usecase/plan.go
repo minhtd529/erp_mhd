@@ -45,10 +45,10 @@ func (uc *PlanUseCase) Create(ctx context.Context, req PlanCreateRequest, caller
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "commission_plan", ResourceID: &plan.ID,
-		Action: "create", NewValue: plan,
+		Action: "CREATE", NewValue: plan,
 	})
 	r := toPlanResponse(plan)
 	return &r, nil
@@ -88,10 +88,10 @@ func (uc *PlanUseCase) Update(ctx context.Context, id uuid.UUID, req PlanUpdateR
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "commission_plan", ResourceID: &plan.ID,
-		Action: "update", NewValue: plan,
+		Action: "UPDATE", NewValue: plan,
 	})
 	r := toPlanResponse(plan)
 	return &r, nil
@@ -103,10 +103,10 @@ func (uc *PlanUseCase) Deactivate(ctx context.Context, id uuid.UUID, callerID uu
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "commission_plan", ResourceID: &plan.ID,
-		Action: "deactivate", NewValue: plan,
+		Action: "DEACTIVATE", NewValue: plan,
 	})
 	r := toPlanResponse(plan)
 	return &r, nil

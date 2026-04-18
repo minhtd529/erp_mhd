@@ -65,7 +65,7 @@ func (uc *PaymentUseCase) Record(ctx context.Context, invoiceID uuid.UUID, req P
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "payments",
 		ResourceID: &pay.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -98,7 +98,7 @@ func (uc *PaymentUseCase) Update(ctx context.Context, id uuid.UUID, req PaymentU
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "payments",
 		ResourceID: &id, Action: "UPDATE", IPAddress: ip,
 	})
@@ -119,7 +119,7 @@ func (uc *PaymentUseCase) Reverse(ctx context.Context, id uuid.UUID, callerID uu
 	if _, err := uc.payRepo.UpdateStatus(ctx, id, domain.PaymentReversed); err != nil {
 		return err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "payments",
 		ResourceID: &id, Action: "DELETE", IPAddress: ip,
 	})
@@ -133,7 +133,7 @@ func (uc *PaymentUseCase) ClearPayment(ctx context.Context, id uuid.UUID, caller
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "payments",
 		ResourceID: &id, Action: "UPDATE", IPAddress: ip,
 		NewValue: map[string]string{"status": "CLEARED"},
@@ -158,7 +158,7 @@ func (uc *PaymentUseCase) DisputePayment(ctx context.Context, id uuid.UUID, call
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "payments",
 		ResourceID: &id, Action: "UPDATE", IPAddress: ip,
 		NewValue: map[string]string{"status": "DISPUTED"},

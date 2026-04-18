@@ -47,7 +47,7 @@ func (uc *ContactUseCase) Create(ctx context.Context, clientID uuid.UUID, req Co
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "client_contacts",
@@ -76,7 +76,7 @@ func (uc *ContactUseCase) Update(ctx context.Context, clientID, contactID uuid.U
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "client_contacts",
@@ -95,7 +95,7 @@ func (uc *ContactUseCase) Delete(ctx context.Context, clientID, contactID uuid.U
 		return err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     &callerID,
 		Module:     "crm",
 		Resource:   "client_contacts",

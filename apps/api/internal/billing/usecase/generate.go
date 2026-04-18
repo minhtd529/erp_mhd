@@ -196,7 +196,7 @@ func (uc *GenerateUseCase) GenerateFromEngagement(ctx context.Context, req Gener
 		finalInv.TaxAmount = taxTotal
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "billing", Resource: "invoices",
 		ResourceID: &inv.ID, Action: "GENERATE", IPAddress: ip,
 		NewValue: map[string]any{"engagement_id": req.EngagementID, "line_items": len(lineItems)},

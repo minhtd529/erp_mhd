@@ -485,3 +485,118 @@ func TestCommissionClawbackReport_DefaultMonths(t *testing.T) {
 		t.Error("expected non-nil summary")
 	}
 }
+
+// ── Commission KPI accuracy tests ─────────────────────────────────────────────
+
+// TestCommissionKPIs_PctRevenue_Calculation verifies the CommissionPctRevenue
+// formula: TotalAccruedMonth / RevenueMonth * 100.
+func TestCommissionKPIs_PctRevenue_Calculation(t *testing.T) {
+	t.Parallel()
+	// Revenue 10,000,000; accrued commission 500,000 → 5.0%
+	repo := &mockRepo{
+		revenueYTD:   50_000_000,
+		revenueMonth: 10_000_000,
+		outstanding:  2_000_000,
+		activeEng:    5,
+		engByStatus:  map[string]int64{"ACTIVE": 5},
+		avgUtil:      70.0,
+		commKPIs: &domain.CommissionKPIs{
+			TotalAccruedMonth: 500_000,
+			TotalPaidMonth:    300_000,
+			TotalPending:      200_000,
+			TotalOnHold:       50_000,
+		},
+	}
+	uc := usecase.NewDashboardUseCase(repo)
+	dash, err := uc.ExecutiveDashboard(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := float64(500_000) / float64(10_000_000) * 100 // 5.0
+	if dash.CommissionKPIs.CommissionPctRevenue != want {
+		t.Errorf("CommissionPctRevenue: want %.4f, got %.4f", want, dash.CommissionKPIs.CommissionPctRevenue)
+	}
+	// Raw KPI values must be preserved
+	if dash.CommissionKPIs.TotalAccruedMonth != 500_000 {
+		t.Errorf("TotalAccruedMonth: want 500000, got %d", dash.CommissionKPIs.TotalAccruedMonth)
+	}
+	if dash.CommissionKPIs.TotalPending != 200_000 {
+		t.Errorf("TotalPending: want 200000, got %d", dash.CommissionKPIs.TotalPending)
+	}
+}
+
+// TestCommissionKPIs_ZeroRevenue_NoPanic verifies no divide-by-zero when RevenueMonth=0.
+func TestCommissionKPIs_ZeroRevenue_NoPanic(t *testing.T) {
+	t.Parallel()
+	repo := &mockRepo{
+		revenueYTD:   0,
+		revenueMonth: 0,
+		engByStatus:  map[string]int64{},
+		commKPIs: &domain.CommissionKPIs{
+			TotalAccruedMonth: 100_000,
+		},
+	}
+	uc := usecase.NewDashboardUseCase(repo)
+	dash, err := uc.ExecutiveDashboard(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if dash.CommissionKPIs.CommissionPctRevenue != 0 {
+		t.Errorf("want 0 pct when revenue is 0, got %.4f", dash.CommissionKPIs.CommissionPctRevenue)
+	}
+}
+
+// ── Revenue by salesperson tests ──────────────────────────────────────────────
+
+// TestRevenueByStaffReport_Happy verifies the report returns rows keyed by staff.
+func TestRevenueByStaffReport_Happy(t *testing.T) {
+	t.Parallel()
+	staffA := uuid.New()
+	staffB := uuid.New()
+	repo := &mockRepo{
+		revByStaff: []domain.RevenueByStaffRow{
+			{StaffID: staffA, TotalRevenue: 50_000_000, InvoiceCount: 5, EngagementCount: 2},
+			{StaffID: staffB, TotalRevenue: 30_000_000, InvoiceCount: 3, EngagementCount: 1},
+		},
+	}
+	uc := usecase.NewReportUseCase(repo)
+
+	rows, err := uc.RevenueByStaffReport(context.Background(), domain.ReportFilter{Year: 2026})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("want 2 rows, got %d", len(rows))
+	}
+	// Verify staffA totals
+	if rows[0].StaffID != staffA {
+		t.Errorf("want staffA first, got %v", rows[0].StaffID)
+	}
+	if rows[0].TotalRevenue != 50_000_000 {
+		t.Errorf("want 50000000, got %d", rows[0].TotalRevenue)
+	}
+	if rows[0].InvoiceCount != 5 {
+		t.Errorf("want 5 invoices, got %d", rows[0].InvoiceCount)
+	}
+	// Combined total matches sum of engagement+invoice join
+	total := rows[0].TotalRevenue + rows[1].TotalRevenue
+	if total != 80_000_000 {
+		t.Errorf("combined revenue want 80000000, got %d", total)
+	}
+}
+
+// TestRevenueByStaffReport_Empty verifies empty results don't error.
+func TestRevenueByStaffReport_Empty(t *testing.T) {
+	t.Parallel()
+	repo := &mockRepo{revByStaff: []domain.RevenueByStaffRow{}}
+	uc := usecase.NewReportUseCase(repo)
+
+	rows, err := uc.RevenueByStaffReport(context.Background(), domain.ReportFilter{Year: 2026})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Errorf("want 0 rows, got %d", len(rows))
+	}
+}

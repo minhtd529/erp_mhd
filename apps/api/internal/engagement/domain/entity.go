@@ -201,22 +201,31 @@ type UpdateEngagementParams struct {
 }
 
 type ListEngagementsFilter struct {
-	Page     int
-	Size     int
-	ClientID *uuid.UUID
-	Status   EngagementStatus
-	Q        string
+	Page        int
+	Size        int
+	ClientID    *uuid.UUID
+	Status      EngagementStatus
+	Q           string       // full-text search via tsvector
+	ServiceType ServiceType  // filter by service type
+	FeeType     FeeType      // filter by fee type
+	PartnerID   *uuid.UUID   // filter by partner
+	DateFrom    *time.Time   // start_date >= DateFrom
+	DateTo      *time.Time   // start_date <= DateTo
 }
 
 // CursorFilter is used by cursor-based list queries.
 type CursorFilter struct {
-	// AfterID and AfterCreatedAt define the exclusive start position.
 	AfterID        *uuid.UUID
 	AfterCreatedAt *time.Time
 	Size           int
 	ClientID       *uuid.UUID
 	Status         EngagementStatus
 	Q              string
+	ServiceType    ServiceType
+	FeeType        FeeType
+	PartnerID      *uuid.UUID
+	DateFrom       *time.Time
+	DateTo         *time.Time
 }
 
 type AssignMemberParams struct {

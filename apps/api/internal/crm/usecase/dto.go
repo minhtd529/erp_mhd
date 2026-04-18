@@ -45,10 +45,13 @@ type ClientUpdateRequest struct {
 
 // ClientListRequest holds validated query parameters for GET /api/v1/clients.
 type ClientListRequest struct {
-	Page   int                  `form:"page,default=1"    binding:"min=1"`
-	Size   int                  `form:"size,default=20"   binding:"min=1,max=100"`
-	Status domain.ClientStatus  `form:"status"`
-	Q      string               `form:"q"`
+	Page         int                 `form:"page,default=1"    binding:"min=1"`
+	Size         int                 `form:"size,default=20"   binding:"min=1,max=100"`
+	Status       domain.ClientStatus `form:"status"`
+	Q            string              `form:"q"`
+	SalesOwnerID *uuid.UUID          `form:"sales_owner_id"`
+	Industry     *string             `form:"industry"`
+	OfficeID     *uuid.UUID          `form:"office_id"`
 }
 
 // ClientResponse is the JSON representation of a client.

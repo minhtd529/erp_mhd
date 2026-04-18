@@ -361,3 +361,43 @@ func TestEngagementUseCase_BroadcastOnActivate(t *testing.T) {
 		t.Errorf("want eventType=engagement.state_changed, got %q", broadcaster.eventType)
 	}
 }
+
+func TestEngagementUseCase_List_AdvancedFilters(t *testing.T) {
+	t.Parallel()
+
+	partnerID := uuid.New()
+	clientID := uuid.New()
+	now := time.Now()
+	dateFrom := now.AddDate(0, -1, 0)
+	dateTo := now.AddDate(0, 1, 0)
+
+	eng := newEngagement(domain.StatusActive, &partnerID)
+	eng.ClientID = clientID
+	eng.ServiceType = domain.ServiceAudit
+	eng.FeeType = domain.FeeFixed
+	eng.StartDate = &now
+
+	uc := usecase.NewEngagementUseCase(
+		&mockEngagementRepo{listItems: []*domain.Engagement{eng}, listTotal: 1},
+		nil, nil,
+	)
+
+	result, err := uc.List(context.Background(), usecase.EngagementListRequest{
+		Page:        1,
+		Size:        20,
+		ServiceType: domain.ServiceAudit,
+		FeeType:     domain.FeeFixed,
+		PartnerID:   &partnerID,
+		DateFrom:    &dateFrom,
+		DateTo:      &dateTo,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 1 {
+		t.Errorf("want 1 result with advanced filters, got %d", result.Total)
+	}
+	if result.Data[0].ServiceType != domain.ServiceAudit {
+		t.Errorf("unexpected service_type: %v", result.Data[0].ServiceType)
+	}
+}

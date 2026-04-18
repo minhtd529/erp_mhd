@@ -216,6 +216,24 @@ func (h *InvoiceHandler) Issue(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+func (h *InvoiceHandler) Cancel(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid invoice ID"))
+		return
+	}
+	caller, ok := mustCallerID(c)
+	if !ok {
+		return
+	}
+	resp, err := h.uc.Cancel(c.Request.Context(), id, caller, c.ClientIP())
+	if err != nil {
+		mapInvoiceErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
 // ── Line Items ────────────────────────────────────────────────────────────────
 
 func (h *InvoiceHandler) ListLineItems(c *gin.Context) {

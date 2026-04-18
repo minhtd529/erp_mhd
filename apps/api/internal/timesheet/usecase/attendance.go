@@ -40,7 +40,7 @@ func (uc *AttendanceUseCase) CheckIn(ctx context.Context, req CheckInRequest, ca
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "timesheet", Resource: "attendance",
 		ResourceID: &a.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -56,7 +56,7 @@ func (uc *AttendanceUseCase) CheckOut(ctx context.Context, callerID uuid.UUID, i
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "timesheet", Resource: "attendance",
 		ResourceID: &a.ID, Action: "UPDATE", IPAddress: ip,
 	})

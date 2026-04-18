@@ -1,0 +1,144 @@
+{
+  "title": "ERP Audit API Overview",
+  "uid": "erp-audit-api",
+  "version": 1,
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "tags": ["erp-audit", "api"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(erp_audit_http_requests_total[1m]))",
+          "legendFormat": "Total req/s"
+        },
+        {
+          "expr": "sum(rate(erp_audit_http_requests_total{status=~'5..'}[1m]))",
+          "legendFormat": "5xx req/s"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "P50 / P95 / P99 Latency",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(erp_audit_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(erp_audit_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(erp_audit_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P99"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "In-Flight Requests",
+      "type": "stat",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "targets": [
+        {
+          "expr": "erp_audit_http_requests_in_flight",
+          "legendFormat": "In-Flight"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "5xx Error Rate %",
+      "type": "stat",
+      "gridPos": { "x": 16, "y": 4, "w": 4, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(erp_audit_http_requests_total{status=~'5..'}[5m])) / sum(rate(erp_audit_http_requests_total[5m])) * 100",
+          "legendFormat": "Error %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Business: Invoices Issued",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 8, "w": 4, "h": 4 },
+      "targets": [
+        {
+          "expr": "erp_audit_business_invoices_issued_total",
+          "legendFormat": "Invoices"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Business: Commissions Accrued",
+      "type": "stat",
+      "gridPos": { "x": 4, "y": 8, "w": 4, "h": 4 },
+      "targets": [
+        {
+          "expr": "erp_audit_business_commissions_accrued_total",
+          "legendFormat": "Commissions"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Business: Active Engagements",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 8, "w": 4, "h": 4 },
+      "targets": [
+        {
+          "expr": "erp_audit_business_active_engagements",
+          "legendFormat": "Active"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Auth Failures by Reason",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum by (reason) (rate(erp_audit_auth_failures_total[5m]))",
+          "legendFormat": "{{ reason }}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Top 10 Slowest Endpoints (P95)",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "topk(10, histogram_quantile(0.95, sum(rate(erp_audit_http_request_duration_seconds_bucket[5m])) by (le, path, method)))",
+          "legendFormat": "{{ method }} {{ path }}",
+          "instant": true
+        }
+      ]
+    }
+  ]
+}

@@ -20,16 +20,38 @@ func NewTaskUseCase(taskRepo domain.TaskRepository, engagementRepo domain.Engage
 	return &TaskUseCase{taskRepo: taskRepo, engagementRepo: engagementRepo, auditLog: auditLog}
 }
 
-func (uc *TaskUseCase) List(ctx context.Context, engagementID uuid.UUID, phase domain.TaskPhase) ([]TaskResponse, error) {
-	tasks, err := uc.taskRepo.ListByEngagement(ctx, engagementID, phase)
+// TaskListRequest carries filter and pagination params for task listing.
+type TaskListRequest struct {
+	Phase domain.TaskPhase
+	Page  int
+	Size  int
+}
+
+func (uc *TaskUseCase) List(ctx context.Context, engagementID uuid.UUID, req TaskListRequest) (PaginatedResult[TaskResponse], error) {
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
+	tasks, err := uc.taskRepo.ListByEngagement(ctx, engagementID, req.Phase)
 	if err != nil {
-		return nil, err
+		return PaginatedResult[TaskResponse]{}, err
 	}
-	out := make([]TaskResponse, len(tasks))
+	all := make([]TaskResponse, len(tasks))
 	for i, t := range tasks {
-		out[i] = toTaskResponse(t)
+		all[i] = toTaskResponse(t)
 	}
-	return out, nil
+	page, size := req.Page, req.Size
+	start := (page - 1) * size
+	if start > len(all) {
+		start = len(all)
+	}
+	end := start + size
+	if end > len(all) {
+		end = len(all)
+	}
+	return newPaginatedResult(all[start:end], int64(len(all)), page, size), nil
 }
 
 func (uc *TaskUseCase) Create(ctx context.Context, engagementID uuid.UUID, req TaskCreateRequest, callerID uuid.UUID, ip string) (*TaskResponse, error) {
@@ -49,7 +71,7 @@ func (uc *TaskUseCase) Create(ctx context.Context, engagementID uuid.UUID, req T
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "engagement_tasks",
 		ResourceID: &t.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -72,7 +94,7 @@ func (uc *TaskUseCase) Update(ctx context.Context, engagementID uuid.UUID, taskI
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "engagement_tasks",
 		ResourceID: &taskID, Action: "UPDATE", IPAddress: ip,
 	})

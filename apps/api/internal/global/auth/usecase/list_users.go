@@ -135,7 +135,7 @@ func (uc *UpdateUserUseCase) Execute(ctx context.Context, targetID uuid.UUID, re
 		return err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     callerID,
 		Module:     "global",
 		Resource:   "users",
@@ -163,7 +163,7 @@ func (uc *DeleteUserUseCase) Execute(ctx context.Context, targetID uuid.UUID, ca
 		return err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     callerID,
 		Module:     "global",
 		Resource:   "users",

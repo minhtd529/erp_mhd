@@ -11,6 +11,18 @@ import (
 
 type PaginatedResult[T any] = pagination.OffsetResult[T]
 
+func paginateSlice[T any](all []T, page, size int) PaginatedResult[T] {
+	start := (page - 1) * size
+	if start > len(all) {
+		start = len(all)
+	}
+	end := start + size
+	if end > len(all) {
+		end = len(all)
+	}
+	return pagination.NewOffsetResult(all[start:end], int64(len(all)), page, size)
+}
+
 // ── Working Paper DTOs ────────────────────────────────────────────────────────
 
 type WPCreateRequest struct {

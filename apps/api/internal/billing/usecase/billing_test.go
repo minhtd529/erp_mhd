@@ -310,6 +310,35 @@ func TestInvoiceUseCase_Issue_WrongStatus(t *testing.T) {
 	}
 }
 
+func TestInvoiceUseCase_Cancel_Success(t *testing.T) {
+	t.Parallel()
+	callerID := uuid.New()
+	inv := newInvoice(domain.InvoiceStatusSent)
+	cancelled := newInvoice(domain.InvoiceStatusCancelled)
+	repo := &mockInvoiceRepo{found: inv, statusUpd: cancelled}
+	uc := usecase.NewInvoiceUseCase(repo, &mockLineItemRepo{}, nil, nil)
+
+	resp, err := uc.Cancel(context.Background(), uuid.New(), callerID, "127.0.0.1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Status != domain.InvoiceStatusCancelled {
+		t.Errorf("want CANCELLED, got %s", resp.Status)
+	}
+}
+
+func TestInvoiceUseCase_Cancel_InvalidTransition(t *testing.T) {
+	t.Parallel()
+	// PAID invoice cannot be cancelled
+	repo := &mockInvoiceRepo{found: newInvoice(domain.InvoiceStatusPaid)}
+	uc := usecase.NewInvoiceUseCase(repo, &mockLineItemRepo{}, nil, nil)
+
+	_, err := uc.Cancel(context.Background(), uuid.New(), uuid.New(), "")
+	if !errors.Is(err, domain.ErrInvalidStateTransition) {
+		t.Fatalf("want INVALID_STATE_TRANSITION for PAID→CANCELLED, got %v", err)
+	}
+}
+
 func TestInvoiceUseCase_List(t *testing.T) {
 	t.Parallel()
 	items := []*domain.Invoice{
@@ -736,4 +765,92 @@ func containsStr(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+func TestReportUseCase_ExportInvoicesXLSX(t *testing.T) {
+	t.Parallel()
+	invID := uuid.New()
+	clientID := uuid.New()
+	callerID := uuid.New()
+	now := time.Now()
+	inv := &domain.Invoice{
+		ID:            invID,
+		InvoiceNumber: "INV-XLSX-001",
+		ClientID:      clientID,
+		InvoiceType:   domain.InvoiceTypeFixedFee,
+		Status:        domain.InvoiceStatusIssued,
+		TotalAmount:   10_000_000,
+		TaxAmount:     1_000_000,
+		CreatedAt:     now,
+		CreatedBy:     callerID,
+	}
+	repo := &mockReportRepo{invoices: []*domain.Invoice{inv}}
+	uc := usecase.NewReportUseCase(repo)
+
+	data, err := uc.ExportInvoicesXLSX(context.Background(), domain.ListInvoicesFilter{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// XLSX files start with PK (ZIP magic bytes)
+	if len(data) < 4 {
+		t.Fatal("XLSX output too small")
+	}
+	if data[0] != 'P' || data[1] != 'K' {
+		t.Errorf("expected XLSX (ZIP) magic bytes PK, got %02x%02x", data[0], data[1])
+	}
+}
+
+func TestReportUseCase_ExportInvoicesXLSX_Empty(t *testing.T) {
+	t.Parallel()
+	repo := &mockReportRepo{invoices: []*domain.Invoice{}}
+	uc := usecase.NewReportUseCase(repo)
+
+	data, err := uc.ExportInvoicesXLSX(context.Background(), domain.ListInvoicesFilter{})
+	if err != nil {
+		t.Fatalf("unexpected error on empty export: %v", err)
+	}
+	// Still produces a valid XLSX (header row only)
+	if len(data) < 4 || data[0] != 'P' || data[1] != 'K' {
+		t.Error("expected valid XLSX even with no rows")
+	}
+}
+
+func TestReportUseCase_ExportPeriodSummaryXLSX(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	repo := &mockReportRepo{
+		periodSummary: &domain.BillingPeriodSummary{
+			PeriodStart:      now,
+			PeriodEnd:        now.Add(30 * 24 * time.Hour),
+			TotalInvoiced:    500_000,
+			TotalPaid:        300_000,
+			TotalOutstanding: 200_000,
+			InvoiceCount:     10,
+			PaidCount:        6,
+			OverdueCount:     2,
+			ByStatus: []domain.StatusCount{
+				{Status: domain.InvoiceStatusIssued, Count: 4, Amount: 200_000},
+				{Status: domain.InvoiceStatusPaid, Count: 6, Amount: 300_000},
+			},
+		},
+		paymentSummary: &domain.PaymentSummary{
+			PeriodStart:   now,
+			PeriodEnd:     now.Add(30 * 24 * time.Hour),
+			TotalReceived: 300_000,
+			PaymentCount:  6,
+			ByMethod:      []domain.MethodCount{},
+		},
+	}
+	uc := usecase.NewReportUseCase(repo)
+
+	data, err := uc.ExportPeriodSummaryXLSX(context.Background(), usecase.PeriodSummaryRequest{
+		Start: now,
+		End:   now.Add(30 * 24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(data) < 4 || data[0] != 'P' || data[1] != 'K' {
+		t.Error("expected valid XLSX output")
+	}
 }

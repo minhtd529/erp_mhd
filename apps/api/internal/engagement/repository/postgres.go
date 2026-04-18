@@ -129,10 +129,35 @@ func (r *EngagementRepo) List(ctx context.Context, f domain.ListEngagementsFilte
 		args = append(args, string(f.Status))
 		idx++
 	}
-	if f.Q != "" {
-		where += fmt.Sprintf(" AND description ILIKE $%d", idx)
-		args = append(args, "%"+f.Q+"%")
+	if f.ServiceType != "" {
+		where += fmt.Sprintf(" AND service_type = $%d", idx)
+		args = append(args, string(f.ServiceType))
 		idx++
+	}
+	if f.FeeType != "" {
+		where += fmt.Sprintf(" AND fee_type = $%d", idx)
+		args = append(args, string(f.FeeType))
+		idx++
+	}
+	if f.PartnerID != nil {
+		where += fmt.Sprintf(" AND partner_id = $%d", idx)
+		args = append(args, *f.PartnerID)
+		idx++
+	}
+	if f.DateFrom != nil {
+		where += fmt.Sprintf(" AND start_date >= $%d", idx)
+		args = append(args, *f.DateFrom)
+		idx++
+	}
+	if f.DateTo != nil {
+		where += fmt.Sprintf(" AND start_date <= $%d", idx)
+		args = append(args, *f.DateTo)
+		idx++
+	}
+	if f.Q != "" {
+		where += fmt.Sprintf(` AND (search_vector @@ plainto_tsquery('simple', $%d) OR description ILIKE $%d)`, idx, idx+1)
+		args = append(args, f.Q, "%"+f.Q+"%")
+		idx += 2
 	}
 
 	var total int64
@@ -187,10 +212,35 @@ func (r *EngagementRepo) ListCursor(ctx context.Context, f domain.CursorFilter) 
 		args = append(args, string(f.Status))
 		idx++
 	}
-	if f.Q != "" {
-		where += fmt.Sprintf(" AND description ILIKE $%d", idx)
-		args = append(args, "%"+f.Q+"%")
+	if f.ServiceType != "" {
+		where += fmt.Sprintf(" AND service_type = $%d", idx)
+		args = append(args, string(f.ServiceType))
 		idx++
+	}
+	if f.FeeType != "" {
+		where += fmt.Sprintf(" AND fee_type = $%d", idx)
+		args = append(args, string(f.FeeType))
+		idx++
+	}
+	if f.PartnerID != nil {
+		where += fmt.Sprintf(" AND partner_id = $%d", idx)
+		args = append(args, *f.PartnerID)
+		idx++
+	}
+	if f.DateFrom != nil {
+		where += fmt.Sprintf(" AND start_date >= $%d", idx)
+		args = append(args, *f.DateFrom)
+		idx++
+	}
+	if f.DateTo != nil {
+		where += fmt.Sprintf(" AND start_date <= $%d", idx)
+		args = append(args, *f.DateTo)
+		idx++
+	}
+	if f.Q != "" {
+		where += fmt.Sprintf(` AND (search_vector @@ plainto_tsquery('simple', $%d) OR description ILIKE $%d)`, idx, idx+1)
+		args = append(args, f.Q, "%"+f.Q+"%")
+		idx += 2
 	}
 
 	limit := f.Size + 1 // fetch one extra to detect hasMore

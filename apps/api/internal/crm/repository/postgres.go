@@ -155,16 +155,31 @@ func (r *Repo) List(ctx context.Context, f domain.ListClientsFilter) ([]*domain.
 		args = append(args, string(f.Status))
 		idx++
 	}
+	if f.SalesOwnerID != nil {
+		where += fmt.Sprintf(" AND sales_owner_id = $%d", idx)
+		args = append(args, *f.SalesOwnerID)
+		idx++
+	}
+	if f.OfficeID != nil {
+		where += fmt.Sprintf(" AND office_id = $%d", idx)
+		args = append(args, *f.OfficeID)
+		idx++
+	}
+	if f.Industry != nil {
+		where += fmt.Sprintf(" AND industry = $%d", idx)
+		args = append(args, *f.Industry)
+		idx++
+	}
 	if f.Q != "" {
-		// Searches the combined trgm expression index: business_name + english_name + tax_code + representative_name
-		where += fmt.Sprintf(` AND (
+		// Use tsvector FTS when search_vector column is available; fall back to trgm ILIKE.
+		where += fmt.Sprintf(` AND (search_vector @@ plainto_tsquery('simple', $%d) OR (
 			COALESCE(business_name,'') || ' ' ||
 			COALESCE(english_name, '') || ' ' ||
 			COALESCE(tax_code,     '') || ' ' ||
 			COALESCE(representative_name,'')
-		) ILIKE $%d`, idx)
-		args = append(args, "%"+f.Q+"%")
-		idx++
+		) ILIKE $%d)`, idx, idx+1)
+		args = append(args, f.Q, "%"+f.Q+"%")
+		idx += 2
 	}
 
 	// Count query

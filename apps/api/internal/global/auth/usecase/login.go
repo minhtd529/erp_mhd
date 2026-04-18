@@ -155,7 +155,7 @@ func (uc *LoginUseCase) issueTokens(ctx context.Context, user *domain.UserForAut
 	_ = uc.users.UpdateLastLogin(ctx, user.ID)
 
 	if uc.auditLog != nil {
-		_ = uc.auditLog.Log(ctx, audit.Entry{
+		_, _ = uc.auditLog.Log(ctx, audit.Entry{
 			UserID:     &user.ID,
 			Module:     "global",
 			Resource:   "users",

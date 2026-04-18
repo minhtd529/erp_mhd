@@ -58,10 +58,10 @@ func (uc *EngCommissionUseCase) Create(ctx context.Context, req EngCommissionCre
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "engagement_commission", ResourceID: &ec.ID,
-		Action: "create", NewValue: ec,
+		Action: "CREATE", NewValue: ec,
 	})
 	r := toEngCommissionResponse(ec)
 	return &r, nil
@@ -100,10 +100,10 @@ func (uc *EngCommissionUseCase) Cancel(ctx context.Context, id uuid.UUID, caller
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "engagement_commission", ResourceID: &ec.ID,
-		Action: "cancel", NewValue: ec,
+		Action: "CANCEL", NewValue: ec,
 	})
 	r := toEngCommissionResponse(ec)
 	return &r, nil
@@ -115,10 +115,10 @@ func (uc *EngCommissionUseCase) Approve(ctx context.Context, id uuid.UUID, calle
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "commission", Resource: "engagement_commission", ResourceID: &ec.ID,
-		Action: "approve", NewValue: ec,
+		Action: "APPROVE", NewValue: ec,
 	})
 	r := toEngCommissionResponse(ec)
 	return &r, nil

@@ -20,16 +20,37 @@ func NewTeamUseCase(memberRepo domain.MemberRepository, engagementRepo domain.En
 	return &TeamUseCase{memberRepo: memberRepo, engagementRepo: engagementRepo, auditLog: auditLog}
 }
 
-func (uc *TeamUseCase) List(ctx context.Context, engagementID uuid.UUID) ([]MemberResponse, error) {
+// MemberListRequest carries pagination params for team listing.
+type MemberListRequest struct {
+	Page int
+	Size int
+}
+
+func (uc *TeamUseCase) List(ctx context.Context, engagementID uuid.UUID, req MemberListRequest) (PaginatedResult[MemberResponse], error) {
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
 	members, err := uc.memberRepo.ListByEngagement(ctx, engagementID)
 	if err != nil {
-		return nil, err
+		return PaginatedResult[MemberResponse]{}, err
 	}
-	out := make([]MemberResponse, len(members))
+	all := make([]MemberResponse, len(members))
 	for i, m := range members {
-		out[i] = toMemberResponse(m)
+		all[i] = toMemberResponse(m)
 	}
-	return out, nil
+	page, size := req.Page, req.Size
+	start := (page - 1) * size
+	if start > len(all) {
+		start = len(all)
+	}
+	end := start + size
+	if end > len(all) {
+		end = len(all)
+	}
+	return newPaginatedResult(all[start:end], int64(len(all)), page, size), nil
 }
 
 func (uc *TeamUseCase) Assign(ctx context.Context, engagementID uuid.UUID, req MemberAssignRequest, callerID uuid.UUID, ip string) (*MemberResponse, error) {
@@ -57,7 +78,7 @@ func (uc *TeamUseCase) Assign(ctx context.Context, engagementID uuid.UUID, req M
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "engagement_members",
 		ResourceID: &m.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -87,7 +108,7 @@ func (uc *TeamUseCase) Update(ctx context.Context, engagementID uuid.UUID, membe
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "engagement_members",
 		ResourceID: &memberID, Action: "UPDATE", IPAddress: ip,
 	})
@@ -100,7 +121,7 @@ func (uc *TeamUseCase) Unassign(ctx context.Context, engagementID uuid.UUID, mem
 	if err := uc.memberRepo.SoftDelete(ctx, memberID, engagementID, callerID); err != nil {
 		return err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "engagement_members",
 		ResourceID: &memberID, Action: "DELETE", IPAddress: ip,
 	})

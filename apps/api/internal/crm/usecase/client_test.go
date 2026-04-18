@@ -294,3 +294,61 @@ func TestClientUseCase_Search(t *testing.T) {
 		t.Errorf("unexpected result: %v", result.Data[0].BusinessName)
 	}
 }
+
+func TestClientUseCase_List_AdvancedFilters(t *testing.T) {
+	t.Parallel()
+
+	ownerID := uuid.New()
+	officeID := uuid.New()
+	industry := "Technology"
+	client := &domain.Client{
+		ID:           uuid.New(),
+		TaxCode:      "0111222333",
+		BusinessName: "TechCorp",
+		SalesOwnerID: &ownerID,
+		Industry:     &industry,
+		OfficeID:     officeID,
+		Status:       domain.ClientStatusAccepted,
+	}
+
+	uc := usecase.NewClientUseCase(&mockClientRepo{listItems: []*domain.Client{client}, listTotal: 1}, nil)
+
+	// Filter by sales_owner_id
+	result, err := uc.List(context.Background(), usecase.ClientListRequest{
+		Page:         1,
+		Size:         20,
+		SalesOwnerID: &ownerID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 1 {
+		t.Errorf("want 1 result, got %d", result.Total)
+	}
+
+	// Filter by office_id
+	result, err = uc.List(context.Background(), usecase.ClientListRequest{
+		Page:     1,
+		Size:     20,
+		OfficeID: &officeID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 1 {
+		t.Errorf("want 1 result with office filter, got %d", result.Total)
+	}
+
+	// Filter by industry
+	result, err = uc.List(context.Background(), usecase.ClientListRequest{
+		Page:     1,
+		Size:     20,
+		Industry: &industry,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 1 {
+		t.Errorf("want 1 result with industry filter, got %d", result.Total)
+	}
+}

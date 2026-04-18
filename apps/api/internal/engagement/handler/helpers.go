@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,4 +32,16 @@ func mustCallerID(c *gin.Context) (uuid.UUID, bool) {
 		return uuid.UUID{}, false
 	}
 	return *id, true
+}
+
+func parsePageSize(c *gin.Context) (page, size int) {
+	page, _ = strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ = strconv.Atoi(c.DefaultQuery("size", "20"))
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 || size > 100 {
+		size = 20
+	}
+	return
 }

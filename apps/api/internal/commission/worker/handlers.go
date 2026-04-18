@@ -11,6 +11,12 @@ import (
 	"github.com/mdh/erp-audit/api/internal/commission/usecase"
 )
 
+// InvoiceCancelledUC is the subset of AccrualUseCase needed by the cancelled handler.
+// Defined as an interface to allow test stubs.
+type InvoiceCancelledUC interface {
+	ClawbackOnInvoiceCancelled(ctx context.Context, invoiceID uuid.UUID) error
+}
+
 // invoiceIssuedPayload matches the payload published by billing invoice.Issue.
 type invoiceIssuedPayload struct {
 	InvoiceID string `json:"invoice_id"`
@@ -68,6 +74,11 @@ func NewPaymentReceivedHandler(uc *usecase.AccrualUseCase) func(context.Context,
 
 // NewInvoiceCancelledHandler returns an Asynq handler for invoice.cancelled events.
 func NewInvoiceCancelledHandler(uc *usecase.AccrualUseCase) func(context.Context, *asynq.Task) error {
+	return NewInvoiceCancelledHandlerFn(uc)
+}
+
+// NewInvoiceCancelledHandlerFn is the testable variant that accepts the InvoiceCancelledUC interface.
+func NewInvoiceCancelledHandlerFn(uc InvoiceCancelledUC) func(context.Context, *asynq.Task) error {
 	return func(ctx context.Context, t *asynq.Task) error {
 		var p invoiceIssuedPayload
 		if err := json.Unmarshal(t.Payload(), &p); err != nil {

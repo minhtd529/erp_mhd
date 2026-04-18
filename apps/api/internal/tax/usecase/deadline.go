@@ -52,10 +52,10 @@ func (uc *TaxDeadlineUseCase) Create(ctx context.Context, clientID uuid.UUID, re
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "tax", Resource: "tax_deadline", ResourceID: &d.ID,
-		Action: "create", NewValue: d,
+		Action: "CREATE", NewValue: d,
 	})
 	return d, nil
 }
@@ -95,10 +95,10 @@ func (uc *TaxDeadlineUseCase) Update(ctx context.Context, id uuid.UUID, req Upda
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "tax", Resource: "tax_deadline", ResourceID: &d.ID,
-		Action: "update", NewValue: d,
+		Action: "UPDATE", NewValue: d,
 	})
 	return d, nil
 }
@@ -116,10 +116,10 @@ func (uc *TaxDeadlineUseCase) MarkCompleted(ctx context.Context, id uuid.UUID, r
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "tax", Resource: "tax_deadline", ResourceID: &d.ID,
-		Action: "mark_completed", NewValue: map[string]string{"status": "COMPLETED"},
+		Action: "MARK_COMPLETED", NewValue: map[string]string{"status": "COMPLETED"},
 	})
 	return d, nil
 }
@@ -161,10 +161,10 @@ func (uc *TaxDeadlineUseCase) AutoGenerate(ctx context.Context, clientID uuid.UU
 		created = append(created, d)
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, IPAddress: ip.String(),
 		Module: "tax", Resource: "tax_deadline",
-		Action:   "auto_generate",
+		Action:   "AUTO_GENERATE",
 		NewValue: map[string]any{"client_id": clientID, "year": year, "count": len(created)},
 	})
 	return created, nil

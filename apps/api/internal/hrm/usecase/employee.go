@@ -45,7 +45,7 @@ func (uc *EmployeeUseCase) Create(ctx context.Context, req EmployeeCreateRequest
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     callerID,
 		Module:     "hrm",
 		Resource:   "employees",
@@ -90,7 +90,7 @@ func (uc *EmployeeUseCase) Update(ctx context.Context, id uuid.UUID, req Employe
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     callerID,
 		Module:     "hrm",
 		Resource:   "employees",
@@ -109,7 +109,7 @@ func (uc *EmployeeUseCase) Delete(ctx context.Context, id uuid.UUID, callerID *u
 		return err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     callerID,
 		Module:     "hrm",
 		Resource:   "employees",
@@ -138,7 +138,7 @@ func (uc *EmployeeUseCase) UpdateBankDetails(ctx context.Context, id uuid.UUID, 
 		return err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID:     callerID,
 		Module:     "hrm",
 		Resource:   "employees",
@@ -153,11 +153,12 @@ func (uc *EmployeeUseCase) UpdateBankDetails(ctx context.Context, id uuid.UUID, 
 // List returns a paginated list of employees.
 func (uc *EmployeeUseCase) List(ctx context.Context, req EmployeeListRequest) (PaginatedResult[EmployeeResponse], error) {
 	employees, total, err := uc.repo.List(ctx, domain.ListEmployeesFilter{
-		Page:     req.Page,
-		Size:     req.Size,
-		Status:   req.Status,
-		OfficeID: req.OfficeID,
-		Q:        req.Q,
+		Page:          req.Page,
+		Size:          req.Size,
+		Status:        req.Status,
+		OfficeID:      req.OfficeID,
+		Q:             req.Q,
+		IsSalesperson: req.IsSalesperson,
 	})
 	if err != nil {
 		return PaginatedResult[EmployeeResponse]{}, fmt.Errorf("hrm.List: %w", err)

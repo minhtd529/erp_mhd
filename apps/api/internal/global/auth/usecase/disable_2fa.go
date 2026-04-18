@@ -59,7 +59,7 @@ func (uc *Disable2FAUseCase) Execute(ctx context.Context, userID uuid.UUID, pass
 
 	// Audit
 	if uc.auditLog != nil {
-		_ = uc.auditLog.Log(ctx, audit.Entry{
+		_, _ = uc.auditLog.Log(ctx, audit.Entry{
 			UserID:     &userID,
 			Module:     "global",
 			Resource:   "users",

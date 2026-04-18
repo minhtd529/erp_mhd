@@ -84,6 +84,7 @@ func AuthMiddleware(jwtSvc *pkgauth.JWTService) gin.HandlerFunc {
 		c.Set(pkgauth.CtxPerms, claims.Permissions)
 		c.Set(pkgauth.CtxBranchID, claims.BranchID)
 		c.Set(pkgauth.CtxDeptID, claims.DepartmentID)
+		c.Set(pkgauth.CtxTwoFAVerified, claims.TwoFAVerified)
 
 		c.Next()
 	}
@@ -127,6 +128,34 @@ func RequirePermission(module, resource, action string) gin.HandlerFunc {
 			"error":   "INSUFFICIENT_PERMISSIONS",
 			"message": "You do not have the required permission: " + required,
 		})
+	}
+}
+
+// Require2FA aborts with 403 if the caller holds a privileged role (FIRM_PARTNER or
+// SUPER_ADMIN) but has not completed the 2FA verification step. This enforces the
+// policy that high-privilege accounts must always authenticate via TOTP or push 2FA.
+// Must be placed after AuthMiddleware in the handler chain.
+func Require2FA() gin.HandlerFunc {
+	const (
+		roleFirmPartner = "FIRM_PARTNER"
+		roleSuperAdmin  = "SUPER_ADMIN"
+	)
+	return func(c *gin.Context) {
+		userRoles, _ := c.Get(pkgauth.CtxRoles)
+		for _, r := range toStringSlice(userRoles) {
+			if r == roleFirmPartner || r == roleSuperAdmin {
+				verified, _ := c.Get(pkgauth.CtxTwoFAVerified)
+				if ok, _ := verified.(bool); !ok {
+					c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+						"error":   "TWO_FA_REQUIRED",
+						"message": "This endpoint requires two-factor authentication for your role",
+					})
+					return
+				}
+				break
+			}
+		}
+		c.Next()
 	}
 }
 

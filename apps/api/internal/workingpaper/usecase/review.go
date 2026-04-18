@@ -31,16 +31,28 @@ func NewReviewUseCase(
 	}
 }
 
-func (uc *ReviewUseCase) ListReviews(ctx context.Context, wpID uuid.UUID) ([]ReviewResponse, error) {
+// ReviewListRequest carries pagination params for review listing.
+type ReviewListRequest struct {
+	Page int
+	Size int
+}
+
+func (uc *ReviewUseCase) ListReviews(ctx context.Context, wpID uuid.UUID, req ReviewListRequest) (PaginatedResult[ReviewResponse], error) {
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
 	reviews, err := uc.reviewRepo.ListByWP(ctx, wpID)
 	if err != nil {
-		return nil, err
+		return PaginatedResult[ReviewResponse]{}, err
 	}
-	data := make([]ReviewResponse, len(reviews))
+	all := make([]ReviewResponse, len(reviews))
 	for i, r := range reviews {
-		data[i] = toReviewResponse(r)
+		all[i] = toReviewResponse(r)
 	}
-	return data, nil
+	return paginateSlice(all, req.Page, req.Size), nil
 }
 
 func (uc *ReviewUseCase) Approve(ctx context.Context, wpID uuid.UUID, role domain.ReviewerRole, callerID uuid.UUID, ip string) (*ReviewResponse, error) {
@@ -57,7 +69,7 @@ func (uc *ReviewUseCase) Approve(ctx context.Context, wpID uuid.UUID, role domai
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_paper_reviews",
 		ResourceID: &rev.ID, Action: "APPROVE", IPAddress: ip,
 	})
@@ -83,7 +95,7 @@ func (uc *ReviewUseCase) RequestChanges(ctx context.Context, wpID uuid.UUID, rol
 	// Transition WP to COMMENTED status
 	_, _ = uc.wpRepo.UpdateStatus(ctx, wpID, domain.WPStatusCommented, callerID)
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_paper_reviews",
 		ResourceID: &rev.ID, Action: "REJECT", IPAddress: ip,
 	})
@@ -107,7 +119,7 @@ func (uc *ReviewUseCase) AddComment(ctx context.Context, wpID uuid.UUID, role do
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_paper_comments",
 		ResourceID: &comment.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -116,20 +128,32 @@ func (uc *ReviewUseCase) AddComment(ctx context.Context, wpID uuid.UUID, role do
 	return &resp, nil
 }
 
-func (uc *ReviewUseCase) ListComments(ctx context.Context, wpID uuid.UUID, role domain.ReviewerRole) ([]CommentResponse, error) {
+// CommentListRequest carries pagination params for comment listing.
+type CommentListRequest struct {
+	Page int
+	Size int
+}
+
+func (uc *ReviewUseCase) ListComments(ctx context.Context, wpID uuid.UUID, role domain.ReviewerRole, req CommentListRequest) (PaginatedResult[CommentResponse], error) {
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
 	rev, err := uc.reviewRepo.FindByWPAndRole(ctx, wpID, role)
 	if err != nil {
-		return nil, err
+		return PaginatedResult[CommentResponse]{}, err
 	}
 	comments, err := uc.commentRepo.ListByReview(ctx, rev.ID)
 	if err != nil {
-		return nil, err
+		return PaginatedResult[CommentResponse]{}, err
 	}
-	data := make([]CommentResponse, len(comments))
+	all := make([]CommentResponse, len(comments))
 	for i, c := range comments {
-		data[i] = toCommentResponse(c)
+		all[i] = toCommentResponse(c)
 	}
-	return data, nil
+	return paginateSlice(all, req.Page, req.Size), nil
 }
 
 func (uc *ReviewUseCase) ResolveComment(ctx context.Context, commentID uuid.UUID, callerID uuid.UUID, ip string) (*CommentResponse, error) {
@@ -138,7 +162,7 @@ func (uc *ReviewUseCase) ResolveComment(ctx context.Context, commentID uuid.UUID
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_paper_comments",
 		ResourceID: &commentID, Action: "UPDATE", IPAddress: ip,
 		NewValue: map[string]string{"issue_status": "RESOLVED"},

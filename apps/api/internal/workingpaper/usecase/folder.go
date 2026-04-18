@@ -29,7 +29,7 @@ func (uc *FolderUseCase) Create(ctx context.Context, engagementID uuid.UUID, req
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "working_papers", Resource: "working_paper_folders",
 		ResourceID: &folder.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -38,14 +38,26 @@ func (uc *FolderUseCase) Create(ctx context.Context, engagementID uuid.UUID, req
 	return &resp, nil
 }
 
-func (uc *FolderUseCase) ListByEngagement(ctx context.Context, engagementID uuid.UUID) ([]FolderResponse, error) {
+// FolderListRequest carries pagination params for folder listing.
+type FolderListRequest struct {
+	Page int
+	Size int
+}
+
+func (uc *FolderUseCase) ListByEngagement(ctx context.Context, engagementID uuid.UUID, req FolderListRequest) (PaginatedResult[FolderResponse], error) {
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
 	folders, err := uc.folderRepo.ListByEngagement(ctx, engagementID)
 	if err != nil {
-		return nil, err
+		return PaginatedResult[FolderResponse]{}, err
 	}
-	data := make([]FolderResponse, len(folders))
+	all := make([]FolderResponse, len(folders))
 	for i, f := range folders {
-		data[i] = toFolderResponse(f)
+		all[i] = toFolderResponse(f)
 	}
-	return data, nil
+	return paginateSlice(all, req.Page, req.Size), nil
 }

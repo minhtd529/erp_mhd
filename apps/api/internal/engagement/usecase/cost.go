@@ -20,16 +20,37 @@ func NewCostUseCase(costRepo domain.CostRepository, engagementRepo domain.Engage
 	return &CostUseCase{costRepo: costRepo, engagementRepo: engagementRepo, auditLog: auditLog}
 }
 
-func (uc *CostUseCase) List(ctx context.Context, engagementID uuid.UUID) ([]CostResponse, error) {
+// CostListRequest carries pagination params for cost listing.
+type CostListRequest struct {
+	Page int
+	Size int
+}
+
+func (uc *CostUseCase) List(ctx context.Context, engagementID uuid.UUID, req CostListRequest) (PaginatedResult[CostResponse], error) {
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
 	costs, err := uc.costRepo.ListByEngagement(ctx, engagementID)
 	if err != nil {
-		return nil, err
+		return PaginatedResult[CostResponse]{}, err
 	}
-	out := make([]CostResponse, len(costs))
+	all := make([]CostResponse, len(costs))
 	for i, c := range costs {
-		out[i] = toCostResponse(c)
+		all[i] = toCostResponse(c)
 	}
-	return out, nil
+	page, size := req.Page, req.Size
+	start := (page - 1) * size
+	if start > len(all) {
+		start = len(all)
+	}
+	end := start + size
+	if end > len(all) {
+		end = len(all)
+	}
+	return newPaginatedResult(all[start:end], int64(len(all)), page, size), nil
 }
 
 func (uc *CostUseCase) Create(ctx context.Context, engagementID uuid.UUID, req CostCreateRequest, callerID uuid.UUID, ip string) (*CostResponse, error) {
@@ -49,7 +70,7 @@ func (uc *CostUseCase) Create(ctx context.Context, engagementID uuid.UUID, req C
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "direct_costs",
 		ResourceID: &c.ID, Action: "CREATE", IPAddress: ip,
 	})
@@ -75,7 +96,7 @@ func (uc *CostUseCase) Submit(ctx context.Context, engagementID uuid.UUID, costI
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "direct_costs",
 		ResourceID: &costID, Action: "STATE_TRANSITION", IPAddress: ip,
 	})
@@ -101,7 +122,7 @@ func (uc *CostUseCase) Approve(ctx context.Context, engagementID uuid.UUID, cost
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "direct_costs",
 		ResourceID: &costID, Action: "APPROVE", IPAddress: ip,
 	})
@@ -127,7 +148,7 @@ func (uc *CostUseCase) Reject(ctx context.Context, engagementID uuid.UUID, costI
 		return nil, err
 	}
 
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "engagement", Resource: "direct_costs",
 		ResourceID: &costID, Action: "REJECT", IPAddress: ip,
 	})

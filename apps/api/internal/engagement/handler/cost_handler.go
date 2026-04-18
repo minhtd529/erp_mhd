@@ -26,12 +26,13 @@ func (h *CostHandler) List(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid engagement ID"))
 		return
 	}
-	costs, err := h.uc.List(c.Request.Context(), engID)
+	page, size := parsePageSize(c)
+	result, err := h.uc.List(c.Request.Context(), engID, usecase.CostListRequest{Page: page, Size: size})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": costs})
+	c.JSON(http.StatusOK, result)
 }
 
 func (h *CostHandler) Create(c *gin.Context) {

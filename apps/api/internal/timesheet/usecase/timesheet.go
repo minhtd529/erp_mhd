@@ -115,7 +115,7 @@ func (uc *TimesheetUseCase) Submit(ctx context.Context, id uuid.UUID, callerID u
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "timesheet", Resource: "timesheets",
 		ResourceID: &id, Action: "STATE_TRANSITION", IPAddress: ip,
 	})
@@ -152,7 +152,7 @@ func (uc *TimesheetUseCase) Approve(ctx context.Context, id uuid.UUID, callerID 
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "timesheet", Resource: "timesheets",
 		ResourceID: &id, Action: "APPROVE", IPAddress: ip,
 	})
@@ -189,7 +189,7 @@ func (uc *TimesheetUseCase) Reject(ctx context.Context, id uuid.UUID, reason str
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "timesheet", Resource: "timesheets",
 		ResourceID: &id, Action: "REJECT", IPAddress: ip,
 	})
@@ -226,7 +226,7 @@ func (uc *TimesheetUseCase) Lock(ctx context.Context, id uuid.UUID, callerID uui
 	if err != nil {
 		return nil, err
 	}
-	_ = uc.auditLog.Log(ctx, audit.Entry{
+	_, _ = uc.auditLog.Log(ctx, audit.Entry{
 		UserID: &callerID, Module: "timesheet", Resource: "timesheets",
 		ResourceID: &id, Action: "STATE_TRANSITION", IPAddress: ip,
 	})

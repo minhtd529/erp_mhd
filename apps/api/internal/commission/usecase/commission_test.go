@@ -478,6 +478,106 @@ func TestAccrualUseCase_CalculateFixed(t *testing.T) {
 	}
 }
 
+func TestAccrualUseCase_ClawbackOnInvoiceCancelled_CreatesNegativeRecord(t *testing.T) {
+	t.Parallel()
+	invoiceID := uuid.New()
+	origID := uuid.New()
+	spID := uuid.New()
+	ecID := uuid.New()
+	engID := uuid.New()
+
+	// Existing accrued record for the cancelled invoice
+	original := &domain.CommissionRecord{
+		ID:                     origID,
+		EngagementCommissionID: ecID,
+		EngagementID:           engID,
+		SalespersonID:          spID,
+		InvoiceID:              &invoiceID,
+		BaseAmount:             10_000_000,
+		Rate:                   0.05,
+		CalculatedAmount:       500_000,
+		HoldbackAmount:         100_000,
+		PayableAmount:          400_000,
+		Status:                 domain.CommStatusAccrued,
+		IsClawback:             false,
+	}
+
+	recordRepo := &mockRecordRepo{list: []*domain.CommissionRecord{original}}
+	ecRepo := &mockECRepo{}
+	billingReader := &mockBillingReader{}
+	uc := usecase.NewAccrualUseCase(ecRepo, recordRepo, billingReader, nil)
+
+	if err := uc.ClawbackOnInvoiceCancelled(context.Background(), invoiceID); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAccrualUseCase_ClawbackOnInvoiceCancelled_SkipsExistingClawbacks(t *testing.T) {
+	t.Parallel()
+	invoiceID := uuid.New()
+
+	// Record is already a clawback — should not create another
+	existing := &domain.CommissionRecord{
+		ID:         uuid.New(),
+		InvoiceID:  &invoiceID,
+		IsClawback: true,
+		Status:     domain.CommStatusClawback,
+	}
+
+	recordRepo := &mockRecordRepo{list: []*domain.CommissionRecord{existing}}
+	uc := usecase.NewAccrualUseCase(&mockECRepo{}, recordRepo, &mockBillingReader{}, nil)
+
+	if err := uc.ClawbackOnInvoiceCancelled(context.Background(), invoiceID); err != nil {
+		t.Fatalf("expected no error when all records are already clawbacks: %v", err)
+	}
+}
+
+func TestAccrualUseCase_ClawbackOnInvoiceCancelled_SkipsCancelledRecords(t *testing.T) {
+	t.Parallel()
+	invoiceID := uuid.New()
+
+	already := &domain.CommissionRecord{
+		ID:         uuid.New(),
+		InvoiceID:  &invoiceID,
+		IsClawback: false,
+		Status:     domain.CommStatusCancelled,
+	}
+
+	recordRepo := &mockRecordRepo{list: []*domain.CommissionRecord{already}}
+	uc := usecase.NewAccrualUseCase(&mockECRepo{}, recordRepo, &mockBillingReader{}, nil)
+
+	if err := uc.ClawbackOnInvoiceCancelled(context.Background(), invoiceID); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAccrualUseCase_ClawbackOnInvoiceCancelled_IdempotentDuplicate(t *testing.T) {
+	t.Parallel()
+	invoiceID := uuid.New()
+
+	orig := &domain.CommissionRecord{
+		ID:               uuid.New(),
+		InvoiceID:        &invoiceID,
+		BaseAmount:       5_000_000,
+		CalculatedAmount: 250_000,
+		HoldbackAmount:   50_000,
+		PayableAmount:    200_000,
+		Status:           domain.CommStatusAccrued,
+		IsClawback:       false,
+	}
+
+	// Create returns ErrDuplicateAccrual — idempotent clawback should not error
+	recordRepo := &mockRecordRepo{
+		list:      []*domain.CommissionRecord{orig},
+		createErr: domain.ErrDuplicateAccrual,
+	}
+	uc := usecase.NewAccrualUseCase(&mockECRepo{}, recordRepo, &mockBillingReader{}, nil)
+
+	if err := uc.ClawbackOnInvoiceCancelled(context.Background(), invoiceID); err != nil {
+		t.Fatalf("ErrDuplicateAccrual should be silently ignored; got: %v", err)
+	}
+}
+
 // ── RecordUseCase tests ───────────────────────────────────────────────────────
 
 func TestRecordUseCase_Approve_Success(t *testing.T) {

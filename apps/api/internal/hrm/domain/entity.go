@@ -103,9 +103,10 @@ type UpdateBankDetailsParams struct {
 
 // ListEmployeesFilter controls pagination and filtering.
 type ListEmployeesFilter struct {
-	Page     int
-	Size     int
-	Status   EmployeeStatus
-	OfficeID *uuid.UUID
-	Q        string // free-text on full_name / email
+	Page          int
+	Size          int
+	Status        EmployeeStatus
+	OfficeID      *uuid.UUID
+	Q             string // full-text search via tsvector
+	IsSalesperson *bool  // filter by salesperson flag
 }
