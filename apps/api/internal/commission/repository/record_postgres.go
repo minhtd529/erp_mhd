@@ -22,7 +22,7 @@ const recCols = `id, engagement_commission_id, engagement_id, salesperson_id,
 	status, accrued_at, approved_by, approved_at, paid_at,
 	paid_by_payroll_id, payout_reference,
 	clawback_record_id, is_clawback, clawback_reason,
-	notes, created_at, updated_at`
+	notes, created_at, updated_at, updated_by`
 
 func scanRecord(row pgx.Row) (*domain.CommissionRecord, error) {
 	var r domain.CommissionRecord
@@ -33,7 +33,7 @@ func scanRecord(row pgx.Row) (*domain.CommissionRecord, error) {
 		&r.Status, &r.AccruedAt, &r.ApprovedBy, &r.ApprovedAt, &r.PaidAt,
 		&r.PaidByPayrollID, &r.PayoutReference,
 		&r.ClawbackRecordID, &r.IsClawback, &r.ClawbackReason,
-		&r.Notes, &r.CreatedAt, &r.UpdatedAt,
+		&r.Notes, &r.CreatedAt, &r.UpdatedAt, &r.UpdatedBy,
 	)
 	return &r, err
 }
@@ -167,16 +167,16 @@ func (r *RecordRepo) ListByInvoice(ctx context.Context, invoiceID uuid.UUID) ([]
 	return list, rows.Err()
 }
 
-func (r *RecordRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.CommissionStatus, approvedBy *uuid.UUID, payoutRef string) (*domain.CommissionRecord, error) {
+func (r *RecordRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.CommissionStatus, approvedBy *uuid.UUID, updatedBy uuid.UUID, payoutRef string) (*domain.CommissionRecord, error) {
 	const q = `UPDATE commission_records
 		SET status=$2, approved_by=$3,
 		    approved_at=CASE WHEN $2='approved' THEN NOW() ELSE approved_at END,
 		    paid_at=CASE WHEN $2='paid' THEN NOW() ELSE paid_at END,
 		    payout_reference=CASE WHEN $4 != '' THEN $4 ELSE payout_reference END,
-		    updated_at=NOW()
+		    updated_by=$5, updated_at=NOW()
 		WHERE id=$1
 		RETURNING ` + recCols
-	row := r.pool.QueryRow(ctx, q, id, string(status), approvedBy, payoutRef)
+	row := r.pool.QueryRow(ctx, q, id, string(status), approvedBy, payoutRef, updatedBy)
 	rec, err := scanRecord(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrCommissionRecordNotFound
@@ -187,14 +187,14 @@ func (r *RecordRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status doma
 	return rec, nil
 }
 
-func (r *RecordRepo) BulkUpdateStatus(ctx context.Context, ids []uuid.UUID, status domain.CommissionStatus, approvedBy *uuid.UUID, payoutRef string) (int64, error) {
+func (r *RecordRepo) BulkUpdateStatus(ctx context.Context, ids []uuid.UUID, status domain.CommissionStatus, approvedBy *uuid.UUID, updatedBy uuid.UUID, payoutRef string) (int64, error) {
 	if len(ids) == 0 {
 		return 0, nil
 	}
 	placeholders := make([]string, len(ids))
-	args := []any{string(status), approvedBy, payoutRef}
+	args := []any{string(status), approvedBy, payoutRef, updatedBy}
 	for i, id := range ids {
-		placeholders[i] = fmt.Sprintf("$%d", i+4)
+		placeholders[i] = fmt.Sprintf("$%d", i+5)
 		args = append(args, id)
 	}
 	q := fmt.Sprintf(`UPDATE commission_records
@@ -202,7 +202,7 @@ func (r *RecordRepo) BulkUpdateStatus(ctx context.Context, ids []uuid.UUID, stat
 		    approved_at=CASE WHEN $1='approved' THEN NOW() ELSE approved_at END,
 		    paid_at=CASE WHEN $1='paid' THEN NOW() ELSE paid_at END,
 		    payout_reference=CASE WHEN $3 != '' THEN $3 ELSE payout_reference END,
-		    updated_at=NOW()
+		    updated_by=$4, updated_at=NOW()
 		WHERE id IN (%s)`, strings.Join(placeholders, ","))
 
 	tag, err := r.pool.Exec(ctx, q, args...)

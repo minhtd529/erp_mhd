@@ -16,7 +16,7 @@ type PlanRepo struct{ pool *pgxpool.Pool }
 
 func NewPlanRepo(pool *pgxpool.Pool) *PlanRepo { return &PlanRepo{pool: pool} }
 
-const planCols = `id, code, name, description, type, default_rate, tiers, apply_base, trigger_on, service_types, is_active, created_by, created_at, updated_at`
+const planCols = `id, code, name, description, type, default_rate, tiers, apply_base, trigger_on, service_types, is_active, created_by, created_at, updated_at, updated_by`
 
 func scanPlan(row pgx.Row) (*domain.CommissionPlan, error) {
 	var p domain.CommissionPlan
@@ -25,7 +25,7 @@ func scanPlan(row pgx.Row) (*domain.CommissionPlan, error) {
 		&p.ID, &p.Code, &p.Name, &p.Description,
 		&p.Type, &p.DefaultRate, &tiersJSON,
 		&p.ApplyBase, &p.TriggerOn, &serviceTypesJSON,
-		&p.IsActive, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt,
+		&p.IsActive, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt, &p.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -107,12 +107,12 @@ func (r *PlanRepo) Update(ctx context.Context, p domain.UpdatePlanParams) (*doma
 		stJSON = []byte("[]")
 	}
 	const q = `UPDATE commission_plans
-		SET name=$2, description=$3, default_rate=$4, tiers=$5, apply_base=$6, trigger_on=$7, service_types=$8, updated_at=NOW()
+		SET name=$2, description=$3, default_rate=$4, tiers=$5, apply_base=$6, trigger_on=$7, service_types=$8, updated_by=$9, updated_at=NOW()
 		WHERE id=$1 AND is_active=true
 		RETURNING ` + planCols
 	row := r.pool.QueryRow(ctx, q,
 		p.ID, p.Name, p.Description, p.DefaultRate,
-		tiersJSON, string(p.ApplyBase), string(p.TriggerOn), stJSON,
+		tiersJSON, string(p.ApplyBase), string(p.TriggerOn), stJSON, p.UpdatedBy,
 	)
 	plan, err := scanPlan(row)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -124,9 +124,9 @@ func (r *PlanRepo) Update(ctx context.Context, p domain.UpdatePlanParams) (*doma
 	return plan, nil
 }
 
-func (r *PlanRepo) Deactivate(ctx context.Context, id uuid.UUID, _ uuid.UUID) (*domain.CommissionPlan, error) {
-	const q = `UPDATE commission_plans SET is_active=false, updated_at=NOW() WHERE id=$1 RETURNING ` + planCols
-	row := r.pool.QueryRow(ctx, q, id)
+func (r *PlanRepo) Deactivate(ctx context.Context, id uuid.UUID, updatedBy uuid.UUID) (*domain.CommissionPlan, error) {
+	const q = `UPDATE commission_plans SET is_active=false, updated_by=$2, updated_at=NOW() WHERE id=$1 RETURNING ` + planCols
+	row := r.pool.QueryRow(ctx, q, id, updatedBy)
 	plan, err := scanPlan(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrPlanNotFound

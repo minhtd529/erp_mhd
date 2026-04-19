@@ -47,7 +47,7 @@ func (uc *RecordUseCase) Approve(ctx context.Context, id uuid.UUID, callerID uui
 		return nil, domain.ErrRecordNotApprovable
 	}
 
-	updated, err := uc.recordRepo.UpdateStatus(ctx, id, domain.CommStatusApproved, &callerID, "")
+	updated, err := uc.recordRepo.UpdateStatus(ctx, id, domain.CommStatusApproved, &callerID, callerID, "")
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (uc *RecordUseCase) MarkPaid(ctx context.Context, id uuid.UUID, payoutRef s
 		return nil, domain.ErrRecordNotPayable
 	}
 
-	updated, err := uc.recordRepo.UpdateStatus(ctx, id, domain.CommStatusPaid, &callerID, payoutRef)
+	updated, err := uc.recordRepo.UpdateStatus(ctx, id, domain.CommStatusPaid, &callerID, callerID, payoutRef)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ type BulkResult struct {
 }
 
 func (uc *RecordUseCase) BulkApprove(ctx context.Context, req BulkApproveRequest, callerID uuid.UUID, ip net.IP) (*BulkResult, error) {
-	n, err := uc.recordRepo.BulkUpdateStatus(ctx, req.IDs, domain.CommStatusApproved, &callerID, "")
+	n, err := uc.recordRepo.BulkUpdateStatus(ctx, req.IDs, domain.CommStatusApproved, &callerID, callerID, "")
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (uc *RecordUseCase) BulkApprove(ctx context.Context, req BulkApproveRequest
 }
 
 func (uc *RecordUseCase) BulkPay(ctx context.Context, req BulkPayRequest, callerID uuid.UUID, ip net.IP) (*BulkResult, error) {
-	n, err := uc.recordRepo.BulkUpdateStatus(ctx, req.IDs, domain.CommStatusPaid, &callerID, req.PayoutReference)
+	n, err := uc.recordRepo.BulkUpdateStatus(ctx, req.IDs, domain.CommStatusPaid, &callerID, callerID, req.PayoutReference)
 	if err != nil {
 		return nil, err
 	}

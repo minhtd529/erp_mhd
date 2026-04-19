@@ -15,7 +15,7 @@ func RegisterRoutes(
 	authMW gin.HandlerFunc,
 ) {
 	// Folders nested under engagements
-	eng := v1.Group("/engagements/:engagement_id", authMW)
+	eng := v1.Group("/engagements/:id", authMW)
 	{
 		eng.GET("/folders", mw.RequireRole("SUPER_ADMIN", "FIRM_PARTNER", "AUDIT_MANAGER", "AUDIT_STAFF"), folderH.List)
 		eng.POST("/folders", mw.RequireRole("SUPER_ADMIN", "FIRM_PARTNER", "AUDIT_MANAGER"), folderH.Create)

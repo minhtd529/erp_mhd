@@ -229,3 +229,27 @@ Modern Professional + Dark Audit Aesthetic – Trust, Authority, Clarity
 - **Loading**: Subtle spinner or progress bar (no animation overkill)
 - **Toast Success**: Light green bg, dark green checkmark, auto-dismiss 5s
 - **Toast Error**: Light red bg, dark red error icon, dismissible
+
+## Migration Workflow (BẮT BUỘC trước khi viết migration mới)
+
+Trước khi tạo file `.up.sql` mới, LUÔN LUÔN chạy các lệnh sau:
+
+```powershell
+# 1. Liệt kê tất cả tables đã tồn tại trong migrations
+Select-String -Path "apps/api/migrations/*.up.sql" -Pattern "CREATE TABLE\s+(\w+)" `
+  | ForEach-Object { $_.Matches.Groups[1].Value } `
+  | Sort-Object -Unique
+
+# 2. Kiểm tra table cụ thể đã được tạo chưa
+$tableName = "<tên_table_cần_tạo>"
+Select-String -Path "apps/api/migrations/*.sql" -Pattern "CREATE TABLE $tableName\b"
+```
+
+Nếu table đã tồn tại → dùng `ALTER TABLE`, KHÔNG dùng `CREATE TABLE`.
+
+Migration mới phải bắt đầu bằng comment:
+```sql
+-- Migration: <mục đích>
+-- Dependencies: <migrations cần có trước> (VD: 000001_init_schema)
+-- Tables affected: <danh sách table> (<CREATE|ALTER|DROP>)
+```

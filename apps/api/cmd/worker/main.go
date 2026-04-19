@@ -23,6 +23,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("worker: failed to load config: %v", err)
 	}
+	if err := config.ValidateProductionConfig(cfg); err != nil {
+		log.Fatalf("worker: %v", err)
+	}
 
 	db, err := database.New(cfg.Database)
 	if err != nil {

@@ -2,15 +2,15 @@
 
 CREATE MATERIALIZED VIEW mv_revenue_by_service AS
 SELECT
-    COALESCE(engagement_type, 'UNKNOWN') AS service_type,
-    COUNT(DISTINCT i.id)                  AS invoice_count,
-    COALESCE(SUM(i.total_amount), 0)      AS total_revenue,
-    COALESCE(SUM(i.tax_amount), 0)        AS total_tax
+    COALESCE(e.service_type, 'UNKNOWN') AS service_type,
+    COUNT(DISTINCT i.id)                 AS invoice_count,
+    COALESCE(SUM(i.total_amount), 0)     AS total_revenue,
+    COALESCE(SUM(i.tax_amount), 0)       AS total_tax
 FROM invoices i
 LEFT JOIN engagements e ON e.id = i.engagement_id
-WHERE i.status IN ('PAID', 'PARTIALLY_PAID')
-  AND i.is_void = FALSE
-GROUP BY COALESCE(engagement_type, 'UNKNOWN');
+WHERE i.status = 'PAID'
+  AND i.is_deleted = FALSE
+GROUP BY COALESCE(e.service_type, 'UNKNOWN');
 
 CREATE UNIQUE INDEX ON mv_revenue_by_service (service_type);
 
@@ -28,6 +28,17 @@ GROUP BY ts.staff_id, DATE_TRUNC('month', te.entry_date);
 CREATE UNIQUE INDEX ON mv_utilization_rate (staff_id, month);
 
 CREATE MATERIALIZED VIEW mv_ar_aging AS
+WITH ar AS (
+    SELECT
+        i.client_id,
+        i.total_amount - COALESCE(SUM(p.amount), 0) AS outstanding_amount,
+        GREATEST(0, CURRENT_DATE - i.due_date)       AS days_overdue
+    FROM invoices i
+    LEFT JOIN payments p ON p.invoice_id = i.id AND p.status IN ('RECORDED', 'CLEARED')
+    WHERE i.status NOT IN ('CANCELLED', 'DRAFT')
+      AND i.is_deleted = FALSE
+    GROUP BY i.id, i.client_id, i.total_amount, i.due_date
+)
 SELECT
     client_id,
     COALESCE(SUM(outstanding_amount) FILTER (WHERE days_overdue = 0),  0) AS current_amount,
@@ -36,27 +47,22 @@ SELECT
     COALESCE(SUM(outstanding_amount) FILTER (WHERE days_overdue BETWEEN 61 AND 90),  0) AS days_61_90,
     COALESCE(SUM(outstanding_amount) FILTER (WHERE days_overdue > 90), 0) AS days_over_90,
     COALESCE(SUM(outstanding_amount), 0)                                   AS total_outstanding
-FROM ar_balances
+FROM ar
 GROUP BY client_id;
 
 CREATE UNIQUE INDEX ON mv_ar_aging (client_id);
 
 CREATE MATERIALIZED VIEW mv_engagement_progress AS
 SELECT
-    e.id                                                                          AS engagement_id,
+    e.id                              AS engagement_id,
     e.client_id,
     e.status,
-    e.budgeted_hours,
-    COALESCE(SUM(te.hours_worked), 0)                                             AS hours_logged,
-    CASE
-        WHEN COALESCE(e.budgeted_hours, 0) = 0 THEN 0
-        ELSE ROUND(100.0 * COALESCE(SUM(te.hours_worked), 0) / e.budgeted_hours)
-    END                                                                           AS completion_percent
+    COALESCE(SUM(te.hours_worked), 0) AS hours_logged
 FROM engagements e
-LEFT JOIN timesheets ts ON ts.engagement_id = e.id AND ts.status IN ('APPROVED', 'LOCKED')
-LEFT JOIN timesheet_entries te ON te.timesheet_id = ts.id
+LEFT JOIN timesheet_entries te ON te.engagement_id = e.id
+LEFT JOIN timesheets ts ON ts.id = te.timesheet_id AND ts.status IN ('APPROVED', 'LOCKED')
 WHERE e.status NOT IN ('CANCELLED')
-GROUP BY e.id, e.client_id, e.status, e.budgeted_hours;
+GROUP BY e.id, e.client_id, e.status;
 
 CREATE UNIQUE INDEX ON mv_engagement_progress (engagement_id);
 

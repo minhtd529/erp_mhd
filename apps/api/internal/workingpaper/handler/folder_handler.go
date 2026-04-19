@@ -20,7 +20,7 @@ func NewFolderHandler(uc *usecase.FolderUseCase) *FolderHandler {
 }
 
 func (h *FolderHandler) Create(c *gin.Context) {
-	engID, err := uuid.Parse(c.Param("engagement_id"))
+	engID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid engagement ID"))
 		return
@@ -43,7 +43,7 @@ func (h *FolderHandler) Create(c *gin.Context) {
 }
 
 func (h *FolderHandler) List(c *gin.Context) {
-	engID, err := uuid.Parse(c.Param("engagement_id"))
+	engID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid engagement ID"))
 		return

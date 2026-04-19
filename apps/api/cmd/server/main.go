@@ -80,6 +80,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+	if err := config.ValidateProductionConfig(cfg); err != nil {
+		log.Fatalf("%v", err)
+	}
 
 	// ── Logger ───────────────────────────────────────────────────────────────
 	l, err := logger.New(cfg.App.Env)
@@ -111,10 +114,15 @@ func main() {
 	outboxPublisher := outbox.New(db.Pool)
 
 	// ── Asynq worker + outbox poller ─────────────────────────────────────────
-	asynqClient := asynq.NewClient(asynq.RedisClientOpt{Addr: cfg.Redis.URL})
+	asynqRedisOpt := asynq.RedisClientOpt{
+		Addr:     redisOpts.Addr,
+		Password: redisOpts.Password,
+		DB:       redisOpts.DB,
+	}
+	asynqClient := asynq.NewClient(asynqRedisOpt)
 	defer asynqClient.Close()
 	outboxPoller := outbox.NewPoller(db.Pool, asynqClient, 5*time.Second, 50)
-	workerSrv := worker.New(worker.Config{RedisAddr: cfg.Redis.URL, Concurrency: 10})
+	workerSrv := worker.New(worker.Config{RedisAddr: redisOpts.Addr, Concurrency: 10})
 
 	// ── Shared services ───────────────────────────────────────────────────────
 	jwtSvc := pkgauth.NewJWTService(

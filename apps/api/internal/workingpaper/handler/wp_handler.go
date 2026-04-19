@@ -22,7 +22,7 @@ func NewWPHandler(uc *usecase.WorkingPaperUseCase) *WPHandler {
 }
 
 func (h *WPHandler) List(c *gin.Context) {
-	engID, err := uuid.Parse(c.Param("engagement_id"))
+	engID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid engagement ID"))
 		return
@@ -41,7 +41,7 @@ func (h *WPHandler) List(c *gin.Context) {
 }
 
 func (h *WPHandler) Create(c *gin.Context) {
-	engID, err := uuid.Parse(c.Param("engagement_id"))
+	engID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid engagement ID"))
 		return

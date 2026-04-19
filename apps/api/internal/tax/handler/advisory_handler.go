@@ -21,7 +21,7 @@ func NewAdvisoryHandler(uc *usecase.AdvisoryUseCase) *AdvisoryHandler {
 
 // List handles GET /clients/:client_id/advisory-records
 func (h *AdvisoryHandler) List(c *gin.Context) {
-	clientID, err := uuid.Parse(c.Param("client_id"))
+	clientID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid client_id"))
 		return
@@ -44,7 +44,7 @@ func (h *AdvisoryHandler) Create(c *gin.Context) {
 	if !ok {
 		return
 	}
-	clientID, err := uuid.Parse(c.Param("client_id"))
+	clientID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid client_id"))
 		return

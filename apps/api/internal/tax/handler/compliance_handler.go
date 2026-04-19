@@ -19,7 +19,7 @@ func NewComplianceHandler(uc *usecase.ComplianceUseCase) *ComplianceHandler {
 
 // GetComplianceStatus handles GET /clients/:client_id/tax/compliance-status
 func (h *ComplianceHandler) GetComplianceStatus(c *gin.Context) {
-	clientID, err := uuid.Parse(c.Param("client_id"))
+	clientID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errResp("INVALID_ID", "Invalid client_id"))
 		return

@@ -46,6 +46,7 @@ type PlanResponse struct {
 	CreatedBy    uuid.UUID               `json:"created_by"`
 	CreatedAt    time.Time               `json:"created_at"`
 	UpdatedAt    time.Time               `json:"updated_at"`
+	UpdatedBy    *uuid.UUID              `json:"updated_by"`
 }
 
 func toPlanResponse(p *domain.CommissionPlan) PlanResponse {
@@ -64,6 +65,7 @@ func toPlanResponse(p *domain.CommissionPlan) PlanResponse {
 		CreatedBy:    p.CreatedBy,
 		CreatedAt:    p.CreatedAt,
 		UpdatedAt:    p.UpdatedAt,
+		UpdatedBy:    p.UpdatedBy,
 	}
 }
 
@@ -157,6 +159,7 @@ type RecordResponse struct {
 	ClawbackReason         string                 `json:"clawback_reason"`
 	Notes                  string                 `json:"notes"`
 	CreatedAt              time.Time              `json:"created_at"`
+	UpdatedBy              *uuid.UUID             `json:"updated_by"`
 }
 
 func toRecordResponse(r *domain.CommissionRecord) RecordResponse {
@@ -182,5 +185,6 @@ func toRecordResponse(r *domain.CommissionRecord) RecordResponse {
 		ClawbackReason:         r.ClawbackReason,
 		Notes:                  r.Notes,
 		CreatedAt:              r.CreatedAt,
+		UpdatedBy:              r.UpdatedBy,
 	}
 }

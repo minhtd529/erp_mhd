@@ -74,6 +74,7 @@ type CommissionPlan struct {
 	CreatedBy    uuid.UUID        `json:"created_by"`
 	CreatedAt    time.Time        `json:"created_at"`
 	UpdatedAt    time.Time        `json:"updated_at"`
+	UpdatedBy    *uuid.UUID       `json:"updated_by"`
 }
 
 type EngagementCommission struct {
@@ -124,4 +125,5 @@ type CommissionRecord struct {
 	Notes                  string           `json:"notes"`
 	CreatedAt              time.Time        `json:"created_at"`
 	UpdatedAt              time.Time        `json:"updated_at"`
+	UpdatedBy              *uuid.UUID       `json:"updated_by"`
 }

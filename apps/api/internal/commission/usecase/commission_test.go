@@ -314,10 +314,15 @@ func (m *mockRecordRepo) ListByInvoice(_ context.Context, _ uuid.UUID) ([]*domai
 func (m *mockRecordRepo) ListForStatement(_ context.Context, _ domain.StatementFilter) ([]*domain.CommissionRecord, error) {
 	return m.list, m.err
 }
-func (m *mockRecordRepo) UpdateStatus(_ context.Context, _ uuid.UUID, _ domain.CommissionStatus, _ *uuid.UUID, _ string) (*domain.CommissionRecord, error) {
+func (m *mockRecordRepo) UpdateStatus(_ context.Context, _ uuid.UUID, _ domain.CommissionStatus, _ *uuid.UUID, updatedBy uuid.UUID, _ string) (*domain.CommissionRecord, error) {
+	if m.found != nil {
+		cp := *m.found
+		cp.UpdatedBy = &updatedBy
+		return &cp, m.err
+	}
 	return m.found, m.err
 }
-func (m *mockRecordRepo) BulkUpdateStatus(_ context.Context, _ []uuid.UUID, _ domain.CommissionStatus, _ *uuid.UUID, _ string) (int64, error) {
+func (m *mockRecordRepo) BulkUpdateStatus(_ context.Context, _ []uuid.UUID, _ domain.CommissionStatus, _ *uuid.UUID, _ uuid.UUID, _ string) (int64, error) {
 	return m.total, m.err
 }
 func (m *mockRecordRepo) SummarySalesperson(_ context.Context, _ uuid.UUID) (*domain.SalespersonSummary, error) {
@@ -802,6 +807,53 @@ func TestRecordUseCase_GetStatement_InvalidPeriod(t *testing.T) {
 	_, err := uc.GetStatement(context.Background(), uuid.New(), "invalid")
 	if err == nil {
 		t.Fatal("expected error for invalid period")
+	}
+}
+
+func TestPlanUseCase_Update_SetsUpdatedBy(t *testing.T) {
+	t.Parallel()
+	callerID := uuid.New()
+	planID := uuid.New()
+	repo := &mockPlanRepo{updated: &domain.CommissionPlan{
+		ID:           planID,
+		Code:         "p1",
+		Name:         "Updated Plan",
+		IsActive:     true,
+		Tiers:        []domain.CommissionTier{},
+		ServiceTypes: []string{},
+		UpdatedBy:    &callerID,
+	}}
+	uc := usecase.NewPlanUseCase(repo, nil)
+
+	resp, err := uc.Update(context.Background(), planID, usecase.PlanUpdateRequest{
+		Name:      "Updated Plan",
+		ApplyBase: domain.CommBaseFeePaid,
+		TriggerOn: domain.CommTriggerPaymentReceived,
+	}, callerID, net.ParseIP("127.0.0.1"))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.UpdatedBy == nil || *resp.UpdatedBy != callerID {
+		t.Errorf("want updated_by=%v, got %v", callerID, resp.UpdatedBy)
+	}
+}
+
+func TestRecordUseCase_Approve_SetsUpdatedBy(t *testing.T) {
+	t.Parallel()
+	recID := uuid.New()
+	callerID := uuid.New()
+	repo := &mockRecordRepo{
+		found: &domain.CommissionRecord{ID: recID, Status: domain.CommStatusAccrued},
+	}
+	uc := usecase.NewRecordUseCase(repo, nil)
+
+	resp, err := uc.Approve(context.Background(), recID, callerID, net.ParseIP("127.0.0.1"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.UpdatedBy == nil || *resp.UpdatedBy != callerID {
+		t.Errorf("want updated_by=%v, got %v", callerID, resp.UpdatedBy)
 	}
 }
 

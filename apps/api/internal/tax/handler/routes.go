@@ -17,7 +17,7 @@ func RegisterRoutes(
 	requireStaff := middleware.RequireRole("FIRM_PARTNER", "AUDIT_MANAGER", "AUDIT_STAFF")
 
 	// Tax deadlines (client-scoped)
-	deadlines := v1.Group("/clients/:client_id/tax-deadlines", authMW)
+	deadlines := v1.Group("/clients/:id/tax-deadlines", authMW)
 	{
 		deadlines.GET("", requireStaff, deadlineH.List)
 		deadlines.POST("", requireManager, deadlineH.Create)
@@ -28,8 +28,8 @@ func RegisterRoutes(
 	}
 
 	// Advisory records (client-scoped creation, top-level access)
-	v1.GET("/clients/:client_id/advisory-records", authMW, requireStaff, advisoryH.List)
-	v1.POST("/clients/:client_id/advisory-records", authMW, requireManager, advisoryH.Create)
+	v1.GET("/clients/:id/advisory-records", authMW, requireStaff, advisoryH.List)
+	v1.POST("/clients/:id/advisory-records", authMW, requireManager, advisoryH.Create)
 
 	advisory := v1.Group("/advisory-records", authMW)
 	{
@@ -46,5 +46,5 @@ func RegisterRoutes(
 		tax.GET("/dashboard", requireStaff, complianceH.Dashboard)
 		tax.GET("/overdue-alerts", requireManager, complianceH.OverdueAlerts)
 	}
-	v1.GET("/clients/:client_id/tax/compliance-status", authMW, requireStaff, complianceH.GetComplianceStatus)
+	v1.GET("/clients/:id/tax/compliance-status", authMW, requireStaff, complianceH.GetComplianceStatus)
 }

@@ -52,8 +52,8 @@ type RecordRepository interface {
 	List(ctx context.Context, f ListRecordsFilter, page, size int) ([]*CommissionRecord, int64, error)
 	ListByInvoice(ctx context.Context, invoiceID uuid.UUID) ([]*CommissionRecord, error)
 	ListForStatement(ctx context.Context, f StatementFilter) ([]*CommissionRecord, error)
-	UpdateStatus(ctx context.Context, id uuid.UUID, status CommissionStatus, approvedBy *uuid.UUID, payoutRef string) (*CommissionRecord, error)
-	BulkUpdateStatus(ctx context.Context, ids []uuid.UUID, status CommissionStatus, approvedBy *uuid.UUID, payoutRef string) (int64, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status CommissionStatus, approvedBy *uuid.UUID, updatedBy uuid.UUID, payoutRef string) (*CommissionRecord, error)
+	BulkUpdateStatus(ctx context.Context, ids []uuid.UUID, status CommissionStatus, approvedBy *uuid.UUID, updatedBy uuid.UUID, payoutRef string) (int64, error)
 	SummarySalesperson(ctx context.Context, salespersonID uuid.UUID) (*SalespersonSummary, error)
 	ListByTeam(ctx context.Context, managerID uuid.UUID, page, size int) ([]*CommissionRecord, int64, error)
 }
