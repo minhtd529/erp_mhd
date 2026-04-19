@@ -42,7 +42,13 @@
       "Bash(go version *)",
       "Bash(echo \"exit: $?\")",
       "Bash(docker exec *)",
-      "Bash(make migrate-down *)"
+      "Bash(make migrate-down *)",
+      "Bash(bash scripts/migration-lint.sh)",
+      "Bash(make migrate-lint *)",
+      "Bash(make migrate-create *)",
+      "Bash(rm apps/api/migrations/000019_test_scaffold.*)",
+      "Bash(npx tsc *)",
+      "Bash(xargs cat *)"
     ]
   }
 }

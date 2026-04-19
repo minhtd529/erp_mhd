@@ -6,6 +6,8 @@ node_modules/
 dist/
 .next/
 out/
+apps/web/next-env.d.ts
+*.tsbuildinfo
 
 # Go
 apps/api/bin/
