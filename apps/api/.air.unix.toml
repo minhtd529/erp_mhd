@@ -1,11 +1,10 @@
-# Air configuration — Windows
-# Binary built as .exe so Windows can execute it directly.
+# Air configuration — Linux / macOS
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/server.exe ./cmd/server"
-  entrypoint = "tmp\\server.exe"
+  cmd = "go build -o ./tmp/server ./cmd/server"
+  entrypoint = "./tmp/server"
   delay = 1000
   exclude_dir = ["tmp", "vendor", "testdata"]
   exclude_regex = ["_test.go"]

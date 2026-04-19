@@ -74,6 +74,11 @@ make dev-api   # API on :8080 (hot reload via air)
 make dev-web   # Web on :3000
 ```
 
+> **Note — air config is OS-aware.**  
+> `make dev-api` automatically selects `.air.toml` on Windows (builds `tmp/server.exe`)  
+> and `.air.unix.toml` on Linux/macOS (builds `tmp/server`).  
+> Do not pass `-c` manually; let the Makefile choose the right config.
+
 ### 6. Verify
 
 ```bash

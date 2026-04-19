@@ -12,6 +12,12 @@ WEB_DIR    := apps/web
 MIGRATIONS := apps/api/migrations
 DB_URL     ?= postgres://erp:erp@localhost:5433/erp_audit?sslmode=disable
 
+ifeq ($(OS),Windows_NT)
+  AIR_CONFIG := .air.toml
+else
+  AIR_CONFIG := .air.unix.toml
+endif
+
 # ── Dev ───────────────────────────────────────────────────────────────────────
 ## dev: Start full development environment (infra + api + web)
 dev: dev-infra
@@ -27,12 +33,12 @@ dev-infra:
 	@echo ">>> Infrastructure ready"
 
 ## dev-api: Start Go API with hot reload (requires air)
-dev-api:
+dev-api: check-tools
 	@echo ">>> Starting API on :8080..."
-	cd $(API_DIR) && air -c .air.toml
+	cd $(API_DIR) && air -c $(AIR_CONFIG)
 
 ## dev-web: Start Next.js dev server
-dev-web:
+dev-web: check-tools
 	@echo ">>> Starting Web on :3000..."
 	cd $(WEB_DIR) && pnpm dev
 
@@ -129,3 +135,9 @@ install:
 help:
 	@echo "Available targets:"
 	@grep -E '^## ' Makefile | sed 's/## /  /'
+
+.PHONY: check-tools
+check-tools:
+	@which air > /dev/null || (echo "ERROR: 'air' not installed. Run: go install github.com/air-verse/air@latest" && exit 1)
+	@which pnpm > /dev/null || (echo "ERROR: 'pnpm' not installed. Install from https://pnpm.io" && exit 1)
+	@test -d apps/web/node_modules || (echo "ERROR: node_modules missing. Run: pnpm install" && exit 1)
