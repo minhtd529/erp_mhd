@@ -129,7 +129,7 @@ func (r *ReportingRepo) GetCommissionMonthlySummary(ctx context.Context, months 
 func (r *ReportingRepo) GetRevenueYTD(ctx context.Context, year int) (int64, error) {
 	var total int64
 	err := r.pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status IN ('PAID','PARTIALLY_PAID') AND is_void=FALSE AND EXTRACT(YEAR FROM issue_date)=$1`,
+		`SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status IN ('PAID','PARTIALLY_PAID') AND is_deleted=FALSE AND EXTRACT(YEAR FROM issue_date)=$1`,
 		year,
 	).Scan(&total)
 	return total, err
@@ -138,7 +138,7 @@ func (r *ReportingRepo) GetRevenueYTD(ctx context.Context, year int) (int64, err
 func (r *ReportingRepo) GetRevenueMonth(ctx context.Context, year, month int) (int64, error) {
 	var total int64
 	err := r.pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status IN ('PAID','PARTIALLY_PAID') AND is_void=FALSE AND EXTRACT(YEAR FROM issue_date)=$1 AND EXTRACT(MONTH FROM issue_date)=$2`,
+		`SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status IN ('PAID','PARTIALLY_PAID') AND is_deleted=FALSE AND EXTRACT(YEAR FROM issue_date)=$1 AND EXTRACT(MONTH FROM issue_date)=$2`,
 		year, month,
 	).Scan(&total)
 	return total, err
@@ -300,7 +300,7 @@ func (r *ReportingRepo) GetRevenueByStaff(ctx context.Context, f domain.ReportFi
 		SELECT e.primary_salesperson_id, COALESCE(SUM(i.total_amount), 0), COUNT(DISTINCT i.id), COUNT(DISTINCT e.id)
 		FROM invoices i
 		JOIN engagements e ON e.id = i.engagement_id
-		WHERE i.status IN ('PAID','PARTIALLY_PAID') AND i.is_void=FALSE AND e.primary_salesperson_id IS NOT NULL`
+		WHERE i.status IN ('PAID','PARTIALLY_PAID') AND i.is_deleted=FALSE AND e.primary_salesperson_id IS NOT NULL`
 	args := []any{}
 	idx := 1
 	if f.Year > 0 {

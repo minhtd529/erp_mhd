@@ -92,6 +92,7 @@ func AuthMiddleware(jwtSvc *pkgauth.JWTService) gin.HandlerFunc {
 
 // RequireRole aborts with 403 if the caller does not have at least one of the given roles.
 // Must be placed after AuthMiddleware in the handler chain.
+// SUPER_ADMIN bypasses all role checks.
 func RequireRole(roles ...string) gin.HandlerFunc {
 	allowed := make(map[string]bool, len(roles))
 	for _, r := range roles {
@@ -100,7 +101,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRoles, _ := c.Get(pkgauth.CtxRoles)
 		for _, r := range toStringSlice(userRoles) {
-			if allowed[r] {
+			if r == "SUPER_ADMIN" || allowed[r] {
 				c.Next()
 				return
 			}

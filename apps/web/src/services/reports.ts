@@ -33,14 +33,14 @@ export interface PersonalDashboard {
 }
 
 export const reportService = {
-  executive: () => api.get<ExecutiveDashboard>('/reports/executive-dashboard').then(r => r.data),
-  manager: () => api.get<ManagerDashboard>('/reports/manager-dashboard').then(r => r.data),
-  personal: () => api.get<PersonalDashboard>('/reports/personal-dashboard').then(r => r.data),
+  executive: () => api.get<ExecutiveDashboard>('/dashboard/executive').then(r => r.data),
+  manager: () => api.get<ManagerDashboard>('/dashboard/manager').then(r => r.data),
+  personal: () => api.get<PersonalDashboard>('/dashboard/personal').then(r => r.data),
   periodSummary: (start: string, end: string) =>
     api.get('/billing/reports/period-summary', { params: { start, end } }).then(r => r.data),
   paymentSummary: (start: string, end: string) =>
     api.get('/billing/reports/payment-summary', { params: { start, end } }).then(r => r.data),
   commissionPayout: (params?: { months?: number }) =>
     api.get('/reports/commission-payout', { params }).then(r => r.data),
-  revenueByStaff: () => api.get('/reports/revenue-by-staff').then(r => r.data),
+  revenueByStaff: () => api.get('/reports/revenue-by-salesperson').then(r => r.data),
 };

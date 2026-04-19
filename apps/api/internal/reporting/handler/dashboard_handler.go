@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,7 @@ func NewDashboardHandler(uc *usecase.DashboardUseCase) *DashboardHandler {
 func (h *DashboardHandler) Executive(c *gin.Context) {
 	dash, err := h.uc.ExecutiveDashboard(c.Request.Context())
 	if err != nil {
+		log.Printf("ERROR dashboard.Executive: %v", err)
 		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "Failed to build executive dashboard"))
 		return
 	}
@@ -33,6 +35,7 @@ func (h *DashboardHandler) Manager(c *gin.Context) {
 	}
 	dash, err := h.uc.ManagerDashboard(c.Request.Context(), callerID)
 	if err != nil {
+		log.Printf("ERROR dashboard.Manager: %v", err)
 		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "Failed to build manager dashboard"))
 		return
 	}
@@ -47,6 +50,7 @@ func (h *DashboardHandler) Personal(c *gin.Context) {
 	}
 	dash, err := h.uc.PersonalDashboard(c.Request.Context(), callerID)
 	if err != nil {
+		log.Printf("ERROR dashboard.Personal: %v", err)
 		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "Failed to build personal dashboard"))
 		return
 	}

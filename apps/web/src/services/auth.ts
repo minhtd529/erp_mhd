@@ -19,7 +19,7 @@ export const authService = {
   verify2FA: (data: Verify2FARequest) => api.post<LoginResponse>('/auth/2fa/verify', data).then(r => r.data),
   verifyBackupCode: (challenge_id: string, code: string) =>
     api.post<LoginResponse>('/auth/2fa/backup', { challenge_id, code }).then(r => r.data),
-  me: () => api.get<MeResponse>('/auth/me').then(r => r.data),
+  me: () => api.get<MeResponse>('/me').then(r => r.data),
   logout: () => api.post('/auth/logout').catch(() => {}),
   refreshToken: (token: string) =>
     api.post<{ access_token: string; refresh_token: string }>('/auth/refresh', { refresh_token: token }).then(r => r.data),

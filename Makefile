@@ -14,7 +14,8 @@ DB_URL     ?= postgres://erp:erp@localhost:5433/erp_audit?sslmode=disable
 
 ifeq ($(OS),Windows_NT)
   AIR_CONFIG := .air.toml
-  BASH := "C:/Program Files/Git/bin/bash.exe"
+  BASH := C:/Program Files/Git/bin/bash.exe
+  SHELL := C:/Program Files/Git/bin/bash.exe
 else
   AIR_CONFIG := .air.unix.toml
   BASH := bash
