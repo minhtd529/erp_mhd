@@ -1,7 +1,7 @@
 # 📋 ERP SYSTEM — TECHNICAL SPECIFICATION DOCUMENT
 ## Hệ thống ERP cho Công ty Kiểm toán – Tư vấn Tài chính – Thuế
 
-**Version:** 1.2 (Updated: 2026-04-16 — Bổ sung Sales Owner tracking + Commission Management)  
+**Version:** 1.3 (Updated: 2026-04-19 — Audit log format, deletion patterns, updated_by columns, naming conventions)  
 **Date:** 2026-04-12  
 **Author:** Senior Architect / PM  
 **Tech Stack:** Golang (Backend) · React / Next.js (Frontend) · PostgreSQL (Database)
@@ -4187,6 +4187,150 @@ CREATE INDEX idx_commission_records_payment ON commission_records(payment_id) WH
 CREATE INDEX idx_commission_plans_active ON commission_plans(is_active, type);
 CREATE INDEX idx_employees_is_salesperson ON employees(is_salesperson) WHERE is_salesperson = TRUE;
 ```
+
+---
+
+## 13.2 Audit Log Format
+
+Two forms are acceptable. The **normalized form is canonical** — all new modules must use it.
+
+### Form 1: Normalized (REQUIRED — current implementation)
+
+`audit_logs` has separate discriminator columns:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `module` | VARCHAR(50) | Domain module — `"crm"`, `"billing"`, `"commission"`, … |
+| `resource` | VARCHAR(50) | Entity type — `"client"`, `"invoice"`, `"commission_plan"`, … |
+| `resource_id` | UUID | Specific entity instance |
+| `action` | VARCHAR(50) | Bare verb — `"CREATE"`, `"UPDATE"`, `"DELETE"`, `"APPROVE"`, `"LOGIN"`, … |
+
+Query examples:
+
+```sql
+-- All deletions of clients:
+SELECT * FROM audit_logs WHERE resource = 'client' AND action = 'DELETE';
+
+-- Full mutation history of a specific invoice:
+SELECT * FROM audit_logs
+WHERE resource = 'invoice' AND resource_id = $1
+ORDER BY created_at;
+
+-- All commission approvals in a date range:
+SELECT * FROM audit_logs
+WHERE module = 'commission' AND action = 'APPROVE'
+  AND created_at BETWEEN $1 AND $2;
+```
+
+### Form 2: Verbose (ACCEPTABLE — legacy alternative)
+
+Single `action` column encodes both verb and entity: `"CREATE_CLIENT"`, `"DELETE_INVOICE"`.  
+Requires LIKE queries for filtering: `WHERE action LIKE 'CREATE_%'`.
+
+### Choice
+
+Form 1 (normalized) is preferred because:
+- Indexed equality lookups (`WHERE resource = 'client'`) outperform `LIKE 'CREATE_%'` scans
+- Lower index storage — two short columns vs. one concatenated string
+- Cleaner aggregation — `GROUP BY action` gives `{"CREATE":12, "UPDATE":5}` not `{"CREATE_CLIENT":12, "UPDATE_CLIENT":5}`
+
+**New modules MUST use Form 1 for consistency with existing implementation.**
+
+---
+
+## 13.3 Deletion & Retention Conventions
+
+`is_deleted` is **not universal** — apply the pattern that fits the entity's semantics.
+
+### Pattern A: Status-based lifecycle (financial/operational records)
+
+Use when a "cancellation" is a legitimate historical event, not a hidden row.
+
+| Table | Status values | Soft-delete equivalent | Queries |
+|-------|--------------|------------------------|---------|
+| `payments` | `RECORDED`, `CLEARED`, `DISPUTED`, `REVERSED` | `status = 'REVERSED'` | Aggregations filter `WHERE status NOT IN ('REVERSED')`; raw history shows all |
+| `engagement_commissions` | `active`, `cancelled` | `status = 'cancelled'` | Active queries filter `WHERE status = 'active'` |
+
+Rationale: reversed payments and cancelled commission arrangements ARE real accounting events. Hiding them with `is_deleted` would misrepresent the entity's ledger history.
+
+### Pattern B: Activation flag (configuration/lookup entities)
+
+Use when an entity can be "retired" but must remain referenced by historical records.
+
+| Table | Flag | Endpoint |
+|-------|------|----------|
+| `commission_plans` | `is_active BOOLEAN DEFAULT true` | `POST /:id/deactivate` |
+
+Rules:
+- Deactivated plans are immutable (UPDATE gated on `WHERE is_active = true`)
+- Referenced `engagement_commissions` retain their FK — historical records are preserved
+- No DELETE endpoint exists
+
+Rationale: `is_active = false` fully expresses "retired." A separate `is_deleted` would be redundant.
+
+### Pattern C: Immutable append-only (financial ledgers)
+
+Use when records CANNOT be mutated or deleted post-approval.
+
+| Table | Mechanism |
+|-------|-----------|
+| `commission_records` | Status transitions only (`accrued → approved → paid`); corrections via clawback chain (`is_clawback = true`, `clawback_record_id` self-references original) |
+
+Rules:
+- No DELETE path exists in repository
+- No UPDATE path outside of status transitions
+- Clawback creates a new negative-amount record — original is never touched
+
+Rationale: double-entry principle. Adding `is_deleted` would undermine the immutability guarantee — a soft-deleted record with `is_deleted = true` would be indistinguishable from a legitimately cancelled one.
+
+### Pattern D: Hard delete with state gate (ephemeral sub-items)
+
+Use when a sub-item only exists before the parent commits.
+
+| Table | Gate condition | Cascade |
+|-------|---------------|---------|
+| `invoice_line_items` | `DELETE` allowed only when parent `invoice.status = 'DRAFT'`; raises `ErrInvoiceLocked` otherwise | `ON DELETE CASCADE` from `invoices` |
+
+Rules:
+- Audit log captures every deletion (`action = 'DELETE'`, `resource = 'invoice_line_items'`)
+- No undo endpoint — DRAFT deletions are ephemeral work-in-progress edits
+- Once invoice is `ISSUED`, line items are permanently frozen via parent lifecycle
+
+Rationale: DRAFT sub-items are analogous to removing a row from a form before submitting. Once the parent commits, items become part of an immutable record.
+
+### Pattern E: Soft delete with `is_deleted` (default for user-facing CRUD entities)
+
+Use for entities without a natural status lifecycle.
+
+Examples: `clients`, `employees`, `engagements`, `working_papers`, `tax_deadlines`
+
+Rules:
+- `is_deleted BOOLEAN NOT NULL DEFAULT false`
+- All list queries filter `WHERE is_deleted = false`
+- No DELETE endpoint physically removes rows
+
+### Selection rubric
+
+When designing a new entity, answer in order:
+
+1. Is this a financial ledger entry (payment, commission accrual)? → **Pattern A** (status-based)
+2. Is this configuration/lookup data referenced by other tables? → **Pattern B** (`is_active`)
+3. Is this a financial record that must never be mutated post-approval? → **Pattern C** (immutable + clawback)
+4. Is this a sub-item that only exists before parent commits? → **Pattern D** (hard delete + state gate)
+5. None of the above (regular CRUD entity)? → **Pattern E** (`is_deleted`)
+
+### Required audit columns (all patterns)
+
+Every mutable table must have:
+
+| Column | Type | Rule |
+|--------|------|------|
+| `created_at` | `TIMESTAMPTZ NOT NULL DEFAULT NOW()` | Always |
+| `created_by` | `UUID REFERENCES users(id)` | Nullable for system-created rows |
+| `updated_at` | `TIMESTAMPTZ NOT NULL DEFAULT NOW()` | Auto-updated on every UPDATE |
+| `updated_by` | `UUID REFERENCES users(id)` | Nullable; populated on every UPDATE |
+
+Exception: purely append-only tables (`audit_logs`, `push_delivery_logs`) may omit `updated_at` / `updated_by`.
 
 ---
 

@@ -5,6 +5,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.3.0] — 2026-04-19
+
+### Security
+- Added `ValidateProductionConfig` startup check that blocks insecure default values for `JWT_SECRET`, `TOTP_ENCRYPTION_KEY`, `HRM_BANK_ENCRYPTION_KEY`, and `MINIO_*` credentials in non-development environments.
+
+### Fixed
+- Gin routing conflicts in `workingpaper` and `tax` modules: nested routes under `/engagements/:X` and `/clients/:X` now use `:id` canonically (Gin disallows mixed param names on shared prefixes).
+- Asynq Redis connection: use parsed `Addr` (`host:port`) instead of full `redis://` URL, which caused "too many colons in address" error at startup.
+- Migration 000018: added `updated_by UUID` column to `commission_plans` and `commission_records` for full audit-column compliance.
+
+### Documentation
+- **SPEC §13.2 Audit Log Format**: documented normalized (`module` + `resource` + `action`) form as the canonical implementation; verbose `"CREATE_CLIENT"` form acknowledged as acceptable alternative. New modules must use normalized form.
+- **SPEC §13.3 Deletion & Retention Conventions**: introduced 5 patterns (A–E) replacing one-size-fits-all `is_deleted`. Each entity type mapped to the pattern that fits its semantics (status-based, is_active flag, immutable/clawback, hard-delete+state-gate, is_deleted).
+- **CLAUDE.md Use Case Struct Naming**: documented bundled `{Entity}UseCase` as the default; per-action split (`{Action}{Entity}UseCase`) reserved for modules with diverging dependencies (e.g., `auth`). Corrected "Services" row — codebase uses `UseCase` structs, not `Service` structs.
+- **CLAUDE.md Response DTO Naming**: `{Entity}Response` default for single-shape entities; `{Entity}{Op}Response` suffix introduced only when 2+ shapes exist for the same entity.
+
+### Unchanged (explicitly verified)
+- `payments`, `engagement_commissions`: status-based lifecycle retained (Pattern A).
+- `commission_plans`: `is_active` flag retained as soft-delete mechanism (Pattern B).
+- `commission_records`: immutable append-only + clawback chain retained (Pattern C).
+- `invoice_line_items`: hard delete + DRAFT state gate retained (Pattern D).
+
+---
+
 ## [1.2.0] — 2026-04-16
 
 ### Added

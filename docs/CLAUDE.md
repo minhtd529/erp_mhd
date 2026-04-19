@@ -159,7 +159,7 @@ Custom commands are available in the `.claude/commands/` directory for common de
 - **Views**: `v_{purpose}`
 
 ### Key Rules
-- **KHÔNG hard delete** – dùng `is_deleted` / `is_void` / `is_active` flags
+- **Deletion patterns**: Không có một pattern phù hợp cho tất cả — xem **SPEC.md §13.3 Deletion & Retention Conventions** để chọn đúng pattern (status-based, is_active, immutable/clawback, hard-delete+gate, hoặc is_deleted)
 - **Primary Keys**: UUID cho tất cả bảng
 - **Audit fields**: `created_at`, `created_by`, `updated_at`, `updated_by`
 - **Enums**: Dùng PostgreSQL CHECK constraints (KHÔNG dùng ENUM type)
@@ -174,10 +174,49 @@ Custom commands are available in the `.claude/commands/` directory for common de
 | Type | Pattern | Example |
 |------|---------|---------|
 | Handlers | `{Entity}Handler` | `EngagementHandler`, `TimesheetHandler` |
-| Services | `{Domain}Service` | `BillingService`, `EngagementService` |
+| Use Cases | `{Entity}UseCase` (bundled) or `{Action}{Entity}UseCase` (per-action) | `ClientUseCase`, `LoginUseCase` |
 | Repositories | `{Entity}Repository` | `ClientRepository`, `TimesheetRepository` |
 | Request DTOs | `{Entity}{Op}Request` | `EngagementCreateRequest` |
-| Response DTOs | `{Entity}{Op}Response` | `EngagementDetailResponse` |
+| Response DTOs | `{Entity}Response` (single shape) or `{Entity}{Op}Response` (multiple shapes) | `PlanResponse`, `ClientDetailResponse` |
+
+### Use Case Struct Naming
+
+**Pattern 1 — Bundled (default):** One struct per entity, methods per action. Use when all CRUD methods share the same dependencies.
+
+```go
+type ClientUseCase struct { repo ClientRepository; auditLog AuditLogger }
+func (uc *ClientUseCase) Create(...) (*Client, error)
+func (uc *ClientUseCase) Update(...) (*Client, error)
+```
+
+**Pattern 2 — Per-action (when deps diverge):** Separate struct per action. Use when operations have significantly different dependency sets.
+
+```go
+type LoginUseCase struct { userRepo UserRepository; tokenSvc TokenService; rateLimiter RateLimiter }
+type CreateUserUseCase struct { userRepo UserRepository; hasher PasswordHasher }
+```
+
+Example: the `auth` module uses per-action because `Login` needs rate limiter + token service while `CreateUser` needs only a hasher. Bundling would force every call site to construct unused dependencies.
+
+**Rule:** Don't mix patterns within a single module. Pick one per module.
+
+### Response DTO Naming
+
+**Single shape** — use plain `{Entity}Response` when one DTO serves all endpoints (list, detail, embed):
+
+```go
+type PlanResponse struct { ... }      // used by GET /plans/:id, GET /plans, embedded in EngCommissionResponse
+type RecordResponse struct { ... }    // used by all commission record endpoints
+```
+
+**Multiple shapes** — add suffix only when you have 2+ genuinely different response shapes:
+
+```go
+type ClientListItem struct { ... }       // lean, for GET /clients
+type ClientDetailResponse struct { ... } // includes relations, for GET /clients/:id
+```
+
+**Rule:** Don't introduce `*DetailResponse` suffix if there is no matching `*ListItem` or `*Summary`. Single-shape entities stay plain `{Entity}Response`.
 
 ---
 
