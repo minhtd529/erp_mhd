@@ -269,26 +269,59 @@ Modern Professional + Dark Audit Aesthetic – Trust, Authority, Clarity
 - **Toast Success**: Light green bg, dark green checkmark, auto-dismiss 5s
 - **Toast Error**: Light red bg, dark red error icon, dismissible
 
-## Migration Workflow (BẮT BUỘC trước khi viết migration mới)
+## Migration Rules (CRITICAL — read before touching apps/api/migrations/)
 
-Trước khi tạo file `.up.sql` mới, LUÔN LUÔN chạy các lệnh sau:
+### Immutability
 
-```powershell
-# 1. Liệt kê tất cả tables đã tồn tại trong migrations
-Select-String -Path "apps/api/migrations/*.up.sql" -Pattern "CREATE TABLE\s+(\w+)" `
-  | ForEach-Object { $_.Matches.Groups[1].Value } `
-  | Sort-Object -Unique
+Once a migration is committed to `main`, it is **immutable forever**:
+- NEVER rename an existing migration file
+- NEVER change the version number
+- NEVER modify the SQL content of a committed migration
+- NEVER delete a committed migration
 
-# 2. Kiểm tra table cụ thể đã được tạo chưa
-$tableName = "<tên_table_cần_tạo>"
-Select-String -Path "apps/api/migrations/*.sql" -Pattern "CREATE TABLE $tableName\b"
+If committed schema is wrong → create a NEW migration with higher version that corrects it.
+The GitHub Actions `migration-lint` workflow blocks PRs that violate these rules.
+
+### Before writing a new migration
+
+1. Use the scaffold tool (don't hand-pick version numbers):
+```bash
+make migrate-create NAME=add_users_status_column
 ```
 
-Nếu table đã tồn tại → dùng `ALTER TABLE`, KHÔNG dùng `CREATE TABLE`.
+2. Check for duplicate table definitions before adding `CREATE TABLE`:
+```bash
+grep -ril "CREATE TABLE.*<table_name>" apps/api/migrations/*.up.sql
+```
+If already exists → use `ALTER TABLE` in new migration, not `CREATE`.
 
-Migration mới phải bắt đầu bằng comment:
-```sql
--- Migration: <mục đích>
--- Dependencies: <migrations cần có trước> (VD: 000001_init_schema)
--- Tables affected: <danh sách table> (<CREATE|ALTER|DROP>)
+3. Write the down migration symmetrically:
+   - `CREATE TABLE` in up → `DROP TABLE` in down
+   - `ADD COLUMN` in up → `DROP COLUMN` in down
+   - Test round-trip: `make migrate-up && make migrate-down && make migrate-up` must all succeed
+
+4. Validate before commit:
+```bash
+make migrate-lint
+```
+
+### What the CI lint checks (`scripts/migration-lint.sh`)
+
+- Every `.up.sql` has a matching `.down.sql`
+- Version sequence has no gaps (1, 2, 3 … no missing numbers)
+- No two migrations create the same table (`CREATE TABLE` dedup check)
+- Filenames follow `000NNN_snake_case.{up,down}.sql` format
+- No modification or deletion of migrations that exist in `origin/main` (PR check only)
+
+### Emergency recovery
+
+**If migration was accidentally renumbered/modified and already pushed:**
+- DO NOT force-push to fix — other DBs will break
+- Create a new migration that brings schema to the correct state
+- Document the incident in CHANGELOG.md
+
+**If it's still local only (not pushed):**
+```bash
+git restore apps/api/migrations/   # undo changes
+docker compose down -v && make migrate-up  # reset local DB
 ```

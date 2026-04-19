@@ -14,8 +14,10 @@ DB_URL     ?= postgres://erp:erp@localhost:5433/erp_audit?sslmode=disable
 
 ifeq ($(OS),Windows_NT)
   AIR_CONFIG := .air.toml
+  BASH := "C:/Program Files/Git/bin/bash.exe"
 else
   AIR_CONFIG := .air.unix.toml
+  BASH := bash
 endif
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
@@ -90,8 +92,13 @@ build-web:
 	cd $(WEB_DIR) && pnpm build
 
 # ── Database / Migrations ────────────────────────────────────────────────────
-## migrate-up: Apply all pending migrations
-migrate-up:
+## migrate-lint: Validate migrations (no duplicates, no gaps, pairs matched)
+.PHONY: migrate-lint
+migrate-lint:
+	@$(BASH) scripts/migration-lint.sh
+
+## migrate-up: Apply all pending migrations (lints first)
+migrate-up: migrate-lint
 	@echo ">>> Running migrations UP..."
 	migrate -path $(MIGRATIONS) -database "$(DB_URL)" up
 
@@ -100,10 +107,13 @@ migrate-down:
 	@echo ">>> Rolling back last migration..."
 	migrate -path $(MIGRATIONS) -database "$(DB_URL)" down 1
 
-## migrate-create name=<migration_name>: Create a new migration file pair
+## migrate-create NAME=xxx: Scaffold new migration with next version number
+.PHONY: migrate-create
 migrate-create:
-	@[ "$(name)" ] || (echo "Usage: make migrate-create name=your_migration_name" && exit 1)
-	migrate create -ext sql -dir $(MIGRATIONS) -seq $(name)
+ifndef NAME
+	$(error NAME is required. Usage: make migrate-create NAME=add_users_status)
+endif
+	@$(BASH) scripts/migration-create.sh "$(NAME)"
 
 ## migrate-status: Show current migration version
 migrate-status:

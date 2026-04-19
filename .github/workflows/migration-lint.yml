@@ -1,0 +1,57 @@
+name: Migration Lint
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/api/migrations/**'
+      - 'scripts/migration-lint.sh'
+      - '.github/workflows/migration-lint.yml'
+  pull_request:
+    paths:
+      - 'apps/api/migrations/**'
+
+jobs:
+  lint:
+    name: Lint migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for git diff checks
+
+      - name: Run migration lint
+        run: bash scripts/migration-lint.sh
+
+      - name: Check for modified or deleted committed migrations
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+
+          BASE="origin/${{ github.base_ref }}"
+
+          # Migrations modified (not added) in this PR
+          MODIFIED=$(git diff --diff-filter=M --name-only "$BASE"...HEAD -- apps/api/migrations/ || true)
+
+          if [ -n "$MODIFIED" ]; then
+            echo "::error::Modified committed migration files detected:"
+            echo "$MODIFIED" | sed 's/^/  - /'
+            echo ""
+            echo "Migrations are IMMUTABLE once committed to main."
+            echo "To change schema, create a NEW migration: make migrate-create NAME=..."
+            exit 1
+          fi
+
+          # Migrations deleted or renamed in this PR
+          DELETED=$(git diff --diff-filter=DR --name-only "$BASE"...HEAD -- apps/api/migrations/ || true)
+
+          if [ -n "$DELETED" ]; then
+            echo "::error::Deleted or renamed migration files detected:"
+            echo "$DELETED" | sed 's/^/  - /'
+            echo ""
+            echo "Deleting/renaming migrations breaks anyone who ran them previously."
+            echo "If the schema is wrong, create a NEW migration to fix it."
+            exit 1
+          fi
+
+          echo "OK: no modifications to committed migrations"
