@@ -29,6 +29,10 @@ import (
 	hrmrepo "github.com/mdh/erp-audit/api/internal/hrm/repository"
 	hrmusecase "github.com/mdh/erp-audit/api/internal/hrm/usecase"
 
+	orghandler "github.com/mdh/erp-audit/api/internal/org/handler"
+	orgrepo "github.com/mdh/erp-audit/api/internal/org/repository"
+	orgusecase "github.com/mdh/erp-audit/api/internal/org/usecase"
+
 	"github.com/mdh/erp-audit/api/pkg/ws"
 
 	enghandler "github.com/mdh/erp-audit/api/internal/engagement/handler"
@@ -159,9 +163,13 @@ func main() {
 	verifyBackupUC := authusecase.NewVerifyBackupCodeUseCase(repo, repo, repo, jwtSvc, auditLogger)
 	regenBackupUC := authusecase.NewRegenBackupCodesUseCase(repo, repo, auditLogger)
 
+	auditLogRepo := authrepo.NewAuditLogRepo(db.Pool)
+	listAuditLogsUC := authusecase.NewListAuditLogsUseCase(auditLogRepo)
+
 	authH := authhandler.NewAuthHandler(loginUC, refreshUC, logoutUC)
 	userH := authhandler.NewUserHandler(createUserUC, assignRoleUC, listUsersUC, updateUserUC, deleteUserUC)
 	twoFAH := authhandler.NewTwoFAHandler(enable2FAUC, verifySetupUC, disable2FAUC, verify2FALoginUC, verifyBackupUC, regenBackupUC)
+	auditH := authhandler.NewAuditHandler(listAuditLogsUC)
 
 	// ── CRM module ────────────────────────────────────────────────────────────
 	crmRepo := crmrepo.New(db.Pool)
@@ -175,6 +183,14 @@ func main() {
 	hrmRepo := hrmrepo.New(db.Pool)
 	employeeUC := hrmusecase.NewEmployeeUseCase(hrmRepo, auditLogger, cfg.HRM.BankEncryptionKey)
 	employeeH := hrmhandler.NewEmployeeHandler(employeeUC)
+
+	// ── Org module (branches & departments) ───────────────────────────────────
+	branchRepo := orgrepo.NewBranchRepo(db.Pool)
+	deptRepo := orgrepo.NewDeptRepo(db.Pool)
+	branchUC := orgusecase.NewBranchUseCase(branchRepo, auditLogger)
+	deptUC := orgusecase.NewDepartmentUseCase(deptRepo, auditLogger)
+	branchH := orghandler.NewBranchHandler(branchUC)
+	deptH := orghandler.NewDepartmentHandler(deptUC)
 
 	// ── WebSocket hub (created early so use cases can broadcast) ─────────────
 	wsHub := ws.NewHub()
@@ -329,9 +345,10 @@ func main() {
 	v1 := r.Group("/api/v1")
 	// Apply 2FA enforcement globally; it only rejects FIRM_PARTNER/SUPER_ADMIN without 2fa_verified.
 	v1.Use(require2FA)
-	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, pushH, authMW)
+	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, pushH, auditH, authMW)
 	crmhandler.RegisterRoutes(v1, clientH, contactH, authMW)
 	hrmhandler.RegisterRoutes(v1, employeeH, authMW)
+	orghandler.RegisterRoutes(v1, branchH, deptH, authMW)
 	enghandler.RegisterRoutes(v1, engH, teamH, taskH, costH, authMW)
 	tshandler.RegisterRoutes(v1, tsH, entryH, attendanceH, authMW)
 	billinghandler.RegisterRoutes(v1, invoiceH, paymentH, memoH, arH, reportH, authMW)

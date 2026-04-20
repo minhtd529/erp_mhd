@@ -1,5 +1,5 @@
-<!-- spec-version: 1.2 | last-sync: 2026-04-16 | changes: none (no changes in v1.2) -->
-> **Spec version**: 1.2 — Last sync: 2026-04-16 — No changes in v1.2
+<!-- spec-version: 1.4 | last-sync: 2026-04-20 | changes: Org bounded context (branches/departments), audit-logs read API, web UI pages -->
+> **Spec version**: 1.4 — Last sync: 2026-04-20 — Added Org bounded context, audit-logs read API, Users/Branches/AuditLogs web pages
 
 # Module 0: Global - Shared Organization & Infrastructure
 
@@ -65,39 +65,51 @@ No critical concurrent operations in Global context.
 
 ### Go Package Layout
 ```
-modules/global/
+internal/global/auth/
+  ├── domain/          (UserForAuth, RefreshToken, TwoFactorChallenge, repository interfaces)
+  ├── repository/
+  │   ├── postgres.go           (UserRepo, RoleRepo, RefreshTokenRepo)
+  │   ├── twofa_postgres.go     (TwoFARepository)
+  │   ├── audit_postgres.go     (AuditLogRepo — ListAuditLogs with JOIN users)
+  │   └── queries/              (sqlc .sql files)
+  ├── usecase/
+  │   ├── login.go              (LoginUseCase)
+  │   ├── create_user.go        (CreateUserUseCase)
+  │   ├── list_users.go         (ListUsersUseCase)
+  │   ├── list_audit_logs.go    (ListAuditLogsUseCase + AuditLogQuerier interface)
+  │   ├── enable_2fa.go / verify_setup.go / disable_2fa.go / ...
+  │   └── dto.go
+  └── handler/
+      ├── auth_handler.go       (AuthHandler: /login /refresh /logout /me)
+      ├── user_handler.go       (UserHandler: /users CRUD)
+      ├── twofa_handler.go      (TwoFAHandler: /auth/2fa/*)
+      ├── push_handler.go       (PushHandler: /auth/push/*, /push-devices/*)
+      ├── audit_handler.go      (AuditHandler: GET /audit-logs)
+      └── routes.go
+
+internal/org/
   ├── domain/
-  │   ├── user.go              (User aggregate)
-  │   ├── organization.go      (Organization aggregate)
-  │   ├── audit.go             (Audit log value object)
-  │   └── notification.go      (Notification aggregate)
-  ├── application/
-  │   ├── user_service.go      (UserService)
-  │   ├── organization_service.go
-  │   └── notification_service.go
-  ├── infrastructure/
-  │   ├── postgres/
-  │   │   ├── user_repository.go
-  │   │   └── audit_repository.go
-  │   ├── minio/
-  │   │   └── file_storage.go
-  │   └── redis/
-  │       └── cache.go
-  └── interfaces/
-      ├── rest/
-      │   ├── auth_handler.go   (Handler: AuthHandler)
-      │   ├── user_handler.go   (Handler: UserHandler)
-      │   └── file_handler.go   (Handler: FileHandler)
-      └── websocket/
-          └── events_handler.go
+  │   ├── entity.go   (Branch, Department + Params/Filter structs)
+  │   ├── repository.go
+  │   └── errors.go
+  ├── usecase/
+  │   ├── branch.go   (BranchUseCase: Create/Update/List/GetByID)
+  │   └── department.go (DepartmentUseCase: Create/Update/List/GetByID)
+  ├── repository/
+  │   └── postgres.go
+  └── handler/
+      ├── branch_handler.go
+      ├── department_handler.go
+      └── routes.go
 ```
 
 ### Go Naming Examples
-- `AuthHandler` - handles `/api/v1/auth/*`
-- `UserHandler` - handles `/api/v1/users/*`
-- `UserService` - business logic
-- `UserRepository` - data access
-- `UserCreateRequest` / `UserDetailResponse` - DTOs
+- `AuthHandler` — handles `/api/v1/auth/*`
+- `UserHandler` — handles `/api/v1/users/*`
+- `AuditHandler` — handles `GET /api/v1/audit-logs`
+- `BranchHandler` / `DepartmentHandler` — handles `/api/v1/branches`, `/api/v1/departments`
+- `ListAuditLogsUseCase` / `BranchUseCase` / `DepartmentUseCase` — use cases
+- `AuditLogRepo` / `AuditLogQuerier` (interface) — repository pattern
 
 ## API Endpoints
 
@@ -135,10 +147,11 @@ modules/global/
 ### Audit Trail
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
-| GET | `/api/v1/audit-logs` | List audit logs (paginated, immutable) | SUPER_ADMIN, AUDIT_MANAGER |
-| GET | `/api/v1/audit-logs?entity_type=engagement&entity_id={id}` | Audit for specific entity | SUPER_ADMIN, AUDIT_MANAGER |
+| GET | `/api/v1/audit-logs` | List audit logs (paginated, immutable, with JOIN to users) | SUPER_ADMIN, AUDIT_MANAGER |
 
-**Query Params**: `?page=1&size=20&entity_type=&entity_id=&action=&created_by=&date_from=&date_to=`
+**Query Params**: `?page=1&size=50&module=&resource=&action=&user_id=&from=YYYY-MM-DD&to=YYYY-MM-DD`
+
+**Response fields per entry**: `id`, `user_id`, `user_name` (joined from users), `module`, `resource`, `resource_id`, `action`, `ip_address`, `created_at`
 
 ### Files
 | Method | Path | Description | Auth |
@@ -147,13 +160,29 @@ modules/global/
 | GET | `/api/v1/files/{id}/download` | Download file (presigned URL) | JWT |
 | GET | `/api/v1/files/{id}/versions` | List file versions | JWT |
 
+### Organization — Branches & Departments (`internal/org/`)
+
+**Entities**: `Branch` (id, code, name, address, phone, is_active), `Department` (id, branch_id, code, name, is_active)
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | `/api/v1/branches` | List branches (paginated, ?q=, ?is_active=) | JWT |
+| POST | `/api/v1/branches` | Create branch | SUPER_ADMIN, FIRM_PARTNER |
+| GET | `/api/v1/branches/{id}` | Get branch by ID | JWT |
+| PUT | `/api/v1/branches/{id}` | Update branch | SUPER_ADMIN, FIRM_PARTNER |
+| GET | `/api/v1/departments` | List departments (?branch_id=, ?q=, ?is_active=) | JWT |
+| POST | `/api/v1/departments` | Create department | SUPER_ADMIN, FIRM_PARTNER |
+| GET | `/api/v1/departments/{id}` | Get department by ID | JWT |
+| PUT | `/api/v1/departments/{id}` | Update department | SUPER_ADMIN, FIRM_PARTNER |
+
+**Note**: Org is a separate bounded context (`internal/org/`) with own domain/repository/usecase/handler. All mutations emit audit log.
+
 ## Database Tables
 
 ### Core Tables
-- `users` (id, email, password_hash, full_name, role, org_id, is_active, is_deleted, created_at, created_by, updated_at, updated_by)
-- `organizations` (id, name, type, is_active, created_at)
-- `offices` (id, org_id, name, city, is_active, created_at)
-- `departments` (id, office_id, name, head_id, is_active, created_at)
+- `users` (id, email, password_hash, full_name, role, is_active, is_deleted, created_at, created_by, updated_at, updated_by)
+- `branches` (id, code, name, address, phone, is_active, created_at, created_by, updated_at, updated_by)
+- `departments` (id, branch_id, code, name, is_active, created_at, created_by, updated_at, updated_by)
 - `audit_logs` (id, entity_type, entity_id, action, old_data JSONB, new_data JSONB, created_at, created_by, ip_address)
 - `file_metadata` (id, bucket, object_key, file_name, file_size_bytes, mime_type, created_by, created_at, is_deleted)
 - `two_factor_secrets` (id, user_id, secret, backup_codes JSONB, method, is_verified, created_at)
@@ -171,11 +200,24 @@ modules/global/
 **Write Model**: GORM for user/org/file mutations, publish to outbox_messages
 **Events**: UserCreated, UserUpdated, OrganizationUpdated, FileUploaded
 
+## Frontend Pages (apps/web)
+
+| Page | Route | Description |
+|------|-------|-------------|
+| Users | `/users` | CRUD + role assignment; filterable by name/email; create/edit/delete dialog |
+| Branches & Departments | `/branches` | Tabbed: Branch CRUD + Department CRUD (scoped by branch) |
+| Audit Logs | `/audit-logs` | Read-only log viewer; filter by module, action, date range; color-coded action badges |
+
+**Services**: `src/services/users.ts`, `src/services/branches.ts`, `src/services/audit.ts`
+
+**Audit action badge colors**: CREATE=green, DELETE=red, UPDATE=default, UPDATE_BANK_DETAILS/UPDATE_STATUS/LOCK=yellow, APPROVE=green, REJECT=red, DEACTIVATE=ghost
+
 ## Error Codes
-`INVALID_CREDENTIALS` - Login failure
-`USER_NOT_FOUND` - User lookup failed
-`TOTP_INVALID` - 2FA code incorrect
-`ORGANIZATION_NOT_FOUND` - Org lookup failed
-`FILE_NOT_FOUND` - File lookup failed
-`AUDIT_LOG_IMMUTABLE` - Attempt to modify audit log
-`INSUFFICIENT_PERMISSIONS` - RBAC/ABAC policy denial
+`INVALID_CREDENTIALS` — Login failure
+`USER_NOT_FOUND` — User lookup failed
+`TOTP_INVALID` — 2FA code incorrect
+`BRANCH_NOT_FOUND` — Branch lookup failed
+`DEPARTMENT_NOT_FOUND` — Department lookup failed
+`FILE_NOT_FOUND` — File lookup failed
+`AUDIT_LOG_IMMUTABLE` — Attempt to modify audit log
+`INSUFFICIENT_PERMISSIONS` — RBAC/ABAC policy denial

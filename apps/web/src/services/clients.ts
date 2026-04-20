@@ -22,11 +22,13 @@ export interface ClientCreateRequest {
   business_name: string;
   english_name?: string;
   tax_code: string;
-  address?: string;
+  address: string;
+  office_id: string;
   phone?: string;
   email?: string;
   representative_name?: string;
   representative_title?: string;
+  representative_phone?: string;
   sales_owner_id?: string;
   referrer_id?: string;
 }

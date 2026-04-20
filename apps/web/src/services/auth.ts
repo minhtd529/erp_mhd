@@ -12,6 +12,8 @@ export interface Verify2FARequest { challenge_id: string; code: string; }
 export interface MeResponse {
   id: string; email: string; full_name: string;
   roles: string[]; two_factor_enabled: boolean;
+  branch_id?: string; department_id?: string;
+  permissions?: string[];
 }
 
 export const authService = {

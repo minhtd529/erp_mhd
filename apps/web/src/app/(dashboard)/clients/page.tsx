@@ -15,19 +15,21 @@ import { PageSpinner } from '@/components/ui/spinner';
 import { Pagination } from '@/components/shared/pagination';
 import { SearchInput } from '@/components/shared/search-input';
 import { clientService, type ClientCreateRequest } from '@/services/clients';
+import { useAuthStore } from '@/stores/auth';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage, formatDate } from '@/lib/utils';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 const schema = z.object({
   business_name: z.string().min(1, 'Bắt buộc'),
-  tax_code: z.string().min(1, 'Bắt buộc'),
+  tax_code: z.string().min(10, 'Tối thiểu 10 ký tự').max(14, 'Tối đa 14 ký tự'),
   english_name: z.string().optional(),
-  address: z.string().optional(),
+  address: z.string().min(1, 'Bắt buộc'),
   phone: z.string().optional(),
   email: z.string().email('Email không hợp lệ').optional().or(z.literal('')),
   representative_name: z.string().optional(),
   representative_title: z.string().optional(),
+  representative_phone: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -75,6 +77,10 @@ function ClientForm({ initial, onSubmit, loading }: { initial?: Partial<FormData
           <Label>Chức danh</Label>
           <Input {...register('representative_title')} />
         </div>
+        <div className="flex flex-col gap-1">
+          <Label>SĐT người đại diện</Label>
+          <Input {...register('representative_phone')} />
+        </div>
       </div>
     </form>
   );
@@ -82,6 +88,7 @@ function ClientForm({ initial, onSubmit, loading }: { initial?: Partial<FormData
 
 export default function ClientsPage() {
   const qc = useQueryClient();
+  const { user } = useAuthStore();
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
   const [dialog, setDialog] = React.useState<'create' | 'edit' | null>(null);
@@ -94,8 +101,13 @@ export default function ClientsPage() {
 
   const selectedClient = data?.data.find(c => c.id === selected);
 
+  const withOfficeId = (d: FormData): ClientCreateRequest => ({
+    ...d,
+    office_id: user?.branch_id ?? '',
+  });
+
   const createMutation = useMutation({
-    mutationFn: (d: ClientCreateRequest) => clientService.create(d),
+    mutationFn: (d: FormData) => clientService.create(withOfficeId(d)),
     onSuccess: () => {
       toast('Tạo khách hàng thành công', 'success');
       qc.invalidateQueries({ queryKey: ['clients'] });
@@ -105,7 +117,7 @@ export default function ClientsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (d: ClientCreateRequest) => clientService.update(selected!, d),
+    mutationFn: (d: FormData) => clientService.update(selected!, withOfficeId(d)),
     onSuccess: () => {
       toast('Cập nhật thành công', 'success');
       qc.invalidateQueries({ queryKey: ['clients'] });

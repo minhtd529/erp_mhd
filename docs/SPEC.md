@@ -1,7 +1,7 @@
 # 📋 ERP SYSTEM — TECHNICAL SPECIFICATION DOCUMENT
 ## Hệ thống ERP cho Công ty Kiểm toán – Tư vấn Tài chính – Thuế
 
-**Version:** 1.3 (Updated: 2026-04-19 — Audit log format, deletion patterns, updated_by columns, naming conventions)  
+**Version:** 1.4 (Updated: 2026-04-20 — Org bounded context (branches/departments), audit-logs read API, web UI pages)  
 **Date:** 2026-04-12  
 **Author:** Senior Architect / PM  
 **Tech Stack:** Golang (Backend) · React / Next.js (Frontend) · PostgreSQL (Database)
@@ -178,7 +178,8 @@ erp-audit/
 │       ├── cmd/
 │       │   └── server/         # Entry point
 │       ├── internal/
-│       │   ├── global/         # Module 0: shared services
+│       │   ├── global/         # Module 0: auth, users, audit logs
+│       │   ├── org/            # Org: branches, departments
 │       │   ├── crm/            # Module 1
 │       │   ├── engagement/     # Module 2
 │       │   ├── timesheet/      # Module 3

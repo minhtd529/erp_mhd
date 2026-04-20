@@ -12,6 +12,7 @@ func RegisterRoutes(
 	users *UserHandler,
 	twoFA *TwoFAHandler,
 	pushH *PushHandler,
+	auditH *AuditHandler,
 	authMW gin.HandlerFunc,
 ) {
 	// ─── Public auth endpoints ────────────────────────────────────────────────
@@ -62,4 +63,7 @@ func RegisterRoutes(
 		u.DELETE("/:id", users.DeleteUser)
 		u.POST("/:id/roles", users.AssignRole)
 	}
+
+	// ─── Audit logs (SUPER_ADMIN only) ────────────────────────────────────────
+	v1.GET("/audit-logs", authMW, mw.RequireRole("SUPER_ADMIN"), auditH.List)
 }

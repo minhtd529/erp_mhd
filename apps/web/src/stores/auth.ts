@@ -7,6 +7,9 @@ export interface AuthUser {
   full_name: string;
   roles: string[];
   two_factor_enabled: boolean;
+  branch_id?: string;
+  department_id?: string;
+  permissions?: string[];
 }
 
 interface AuthState {

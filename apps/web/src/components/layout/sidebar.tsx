@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
 import {
   LayoutDashboard, Users, Building2, Briefcase, Clock, FileText,
-  DollarSign, FolderOpen, TrendingUp, BarChart3, Settings, LogOut, ShieldCheck,
+  DollarSign, FolderOpen, TrendingUp, BarChart3, Settings, LogOut, ShieldCheck, UserCog, GitBranch, ScrollText,
 } from 'lucide-react';
 
 interface NavItem {
@@ -19,6 +19,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Khách hàng', href: '/clients', icon: Building2 },
   { label: 'Nhân viên', href: '/employees', icon: Users, roles: ['FIRM_PARTNER', 'AUDIT_MANAGER', 'SUPER_ADMIN'] },
+  { label: 'Người dùng & Vai trò', href: '/users', icon: UserCog, roles: ['SUPER_ADMIN', 'FIRM_PARTNER'] },
+  { label: 'Chi nhánh & Phòng ban', href: '/branches', icon: GitBranch, roles: ['SUPER_ADMIN', 'FIRM_PARTNER'] },
   { label: 'Hợp đồng', href: '/engagements', icon: Briefcase },
   { label: 'Chấm công', href: '/timesheets', icon: Clock },
   { label: 'Hóa đơn', href: '/billing/invoices', icon: FileText },
@@ -26,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Hồ sơ kiểm toán', href: '/working-papers', icon: FolderOpen },
   { label: 'Hoa hồng', href: '/commissions', icon: TrendingUp },
   { label: 'Báo cáo', href: '/reports', icon: BarChart3, roles: ['FIRM_PARTNER', 'AUDIT_MANAGER', 'SUPER_ADMIN'] },
+  { label: 'Nhật ký hệ thống', href: '/audit-logs', icon: ScrollText, roles: ['SUPER_ADMIN'] },
   { label: 'Cài đặt', href: '/settings', icon: Settings, roles: ['SUPER_ADMIN'] },
 ];
 

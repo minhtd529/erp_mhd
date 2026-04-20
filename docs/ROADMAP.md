@@ -81,6 +81,20 @@ Following Phase 1-5 approach with 9 DDD Bounded Contexts. Each phase builds on p
 - [x] Login returns HTTP 202 + challenge_id when 2FA required; trusted device skips 2FA
 - [x] 22 tests PASS: 6 Login + 4 CreateUser + 4 Login2FA + 5 Verify2FALogin + 3 VerifyBackupCode + 5 integration (skipped without DB)
 
+### Phase 1.6 Completed: Audit Logs API, Org Module & Web Pages (2026-04-20)
+- [x] **Audit Logs API**: `GET /api/v1/audit-logs` với full filtering (module, resource, action, user_id, from, to)
+- [x] `internal/global/auth/usecase/list_audit_logs.go`: `ListAuditLogsUseCase` + `AuditLogQuerier` interface
+- [x] `internal/global/auth/repository/audit_postgres.go`: `AuditLogRepo` — LEFT JOIN users để lấy full_name, dynamic WHERE clause
+- [x] `internal/global/auth/handler/audit_handler.go`: `AuditHandler.List` — bind query params, trả PaginatedResult[AuditLogEntry]
+- [x] **Org bounded context** (`internal/org/`): Branch & Department entities, repository, usecase, handler
+- [x] `GET|POST /api/v1/branches`, `GET|PUT /api/v1/branches/:id` — RBAC: SUPER_ADMIN, FIRM_PARTNER
+- [x] `GET|POST /api/v1/departments`, `GET|PUT /api/v1/departments/:id` — RBAC: SUPER_ADMIN, FIRM_PARTNER
+- [x] **Frontend**: `/users` page — User CRUD + role assignment (create, edit, delete, assign roles)
+- [x] **Frontend**: `/branches` page — Branch CRUD + Department CRUD (tabbed UI)
+- [x] **Frontend**: `/audit-logs` page — read-only log viewer với filter by module, action, date range; color-coded action badges
+- [x] New services: `src/services/users.ts`, `src/services/branches.ts`, `src/services/audit.ts`
+- [x] Sidebar updated to include Users, Branches, Audit Logs navigation items
+
 ### Phase 1.5 Completed: Sales Owner & Salesperson Fields (2026-04-16)
 
 - [x] **Migration 000005**: ALTER `clients` (+sales_owner_id, +referrer_id), ALTER `employees` (+is_salesperson, +sales_commission_eligible, +bank_account_number_enc, +bank_account_name), ALTER `engagements` (+primary_salesperson_id, guarded DO block)
@@ -95,11 +109,13 @@ Following Phase 1-5 approach with 9 DDD Bounded Contexts. Each phase builds on p
 ### Acceptance Criteria
 - [x] Auth with JWT + TOTP 2FA passed 100% tests
 - [x] Global/CRM/HRM basic CRUD endpoints working
-- [x] Audit trail logging all mutations (LOGIN, CREATE, ASSIGN_ROLE)
+- [x] Audit trail logging all mutations (LOGIN, CREATE, ASSIGN_ROLE) + `GET /api/v1/audit-logs` read endpoint
 - [x] Dev environment runs locally via `make dev`
 - [x] Client API accepts/returns `sales_owner_id`, `referrer_id`
 - [x] Employee API accepts/returns `is_salesperson`, `sales_commission_eligible`
 - [x] Bank account fields encrypted at rest, not exposed in list endpoints
+- [x] Branch & Department management endpoints (Org bounded context) — SUPER_ADMIN/FIRM_PARTNER
+- [x] User management UI (/users), Org UI (/branches), Audit Logs UI (/audit-logs) live in web app
 
 ---
 
