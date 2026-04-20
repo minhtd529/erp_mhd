@@ -25,11 +25,11 @@ const STATUS_VARIANTS: Record<InvoiceStatus, 'ghost' | 'warning' | 'default' | '
 export default function InvoicesPage() {
   const qc = useQueryClient();
   const [page, setPage] = React.useState(1);
-  const [statusFilter, setStatusFilter] = React.useState<string>('');
+  const [statusFilter, setStatusFilter] = React.useState<string>('all');
 
   const { data, isLoading } = useQuery({
     queryKey: ['invoices', page, statusFilter],
-    queryFn: () => invoiceService.list({ page, size: 20, status: statusFilter || undefined }),
+    queryFn: () => invoiceService.list({ page, size: 20, status: statusFilter === 'all' ? undefined : statusFilter as InvoiceStatus }),
   });
 
   const transMut = useMutation({
@@ -54,7 +54,7 @@ export default function InvoicesPage() {
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Tất cả trạng thái" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tất cả</SelectItem>
+            <SelectItem value="all">Tất cả</SelectItem>
             {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>

@@ -7,6 +7,7 @@ import (
 	"github.com/mdh/erp-audit/api/internal/billing/domain"
 	"github.com/mdh/erp-audit/api/pkg/audit"
 	"github.com/mdh/erp-audit/api/pkg/outbox"
+	"github.com/mdh/erp-audit/api/pkg/pagination"
 )
 
 // PaymentUseCase handles payment recording and lifecycle.
@@ -166,6 +167,18 @@ func (uc *PaymentUseCase) DisputePayment(ctx context.Context, id uuid.UUID, call
 
 	resp := toPaymentResponse(updated)
 	return &resp, nil
+}
+
+func (uc *PaymentUseCase) ListAll(ctx context.Context, page, size int) (PaginatedResult[PaymentResponse], error) {
+	payments, total, err := uc.payRepo.ListAll(ctx, page, size)
+	if err != nil {
+		return PaginatedResult[PaymentResponse]{}, err
+	}
+	data := make([]PaymentResponse, len(payments))
+	for i, p := range payments {
+		data[i] = toPaymentResponse(p)
+	}
+	return pagination.NewOffsetResult(data, total, page, size), nil
 }
 
 func (uc *PaymentUseCase) ListByInvoice(ctx context.Context, invoiceID uuid.UUID) ([]PaymentResponse, error) {

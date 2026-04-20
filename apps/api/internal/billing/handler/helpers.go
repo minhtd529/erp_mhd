@@ -8,6 +8,21 @@ import (
 	pkgauth "github.com/mdh/erp-audit/api/pkg/auth"
 )
 
+func parsePage(c *gin.Context) (page, size int) {
+	var q struct {
+		Page int `form:"page"`
+		Size int `form:"size"`
+	}
+	_ = c.ShouldBindQuery(&q)
+	if q.Page <= 0 {
+		q.Page = 1
+	}
+	if q.Size <= 0 {
+		q.Size = 20
+	}
+	return q.Page, q.Size
+}
+
 func errResp(code, msg string) gin.H {
 	return gin.H{"error": code, "message": msg}
 }

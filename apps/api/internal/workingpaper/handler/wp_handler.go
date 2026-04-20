@@ -171,6 +171,21 @@ func (h *WPHandler) SignOff(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// ListAll returns all working papers across engagements (global view).
+func (h *WPHandler) ListAll(c *gin.Context) {
+	var req usecase.WPListRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errResp("VALIDATION_ERROR", err.Error()))
+		return
+	}
+	result, err := h.uc.ListAll(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
 // PendingReview returns WPs awaiting action by the caller's reviewer role.
 func (h *WPHandler) PendingReview(c *gin.Context) {
 	var req usecase.PendingReviewRequest

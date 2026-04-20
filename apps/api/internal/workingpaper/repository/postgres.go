@@ -153,6 +153,42 @@ func (r *WPRepo) List(ctx context.Context, f domain.ListWPFilter) ([]*domain.Wor
 	return list, total, rows.Err()
 }
 
+func (r *WPRepo) ListAll(ctx context.Context, status domain.WPStatus, page, size int) ([]*domain.WorkingPaper, int64, error) {
+	offset := (page - 1) * size
+	args := []any{}
+	where := "WHERE is_deleted=false"
+	idx := 1
+	if status != "" {
+		where += fmt.Sprintf(" AND status=$%d", idx)
+		args = append(args, string(status))
+		idx++
+	}
+	var total int64
+	if err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM working_papers "+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("wp.ListAll count: %w", err)
+	}
+	args = append(args, size, offset)
+	dataQ := fmt.Sprintf("SELECT %s FROM working_papers %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		wpCols, where, idx, idx+1)
+	rows, err := r.pool.Query(ctx, dataQ, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("wp.ListAll query: %w", err)
+	}
+	defer rows.Close()
+	var list []*domain.WorkingPaper
+	for rows.Next() {
+		wp, err := scanWP(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("wp.ListAll scan: %w", err)
+		}
+		list = append(list, wp)
+	}
+	if list == nil {
+		list = []*domain.WorkingPaper{}
+	}
+	return list, total, rows.Err()
+}
+
 func (r *WPRepo) ListPendingReview(ctx context.Context, role domain.ReviewerRole, page, size int) ([]*domain.WorkingPaper, int64, error) {
 	offset := (page - 1) * size
 	const where = `

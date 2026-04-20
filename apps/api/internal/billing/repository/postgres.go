@@ -403,6 +403,40 @@ func (r *PaymentRepo) ListByInvoice(ctx context.Context, invoiceID uuid.UUID) ([
 	return payments, rows.Err()
 }
 
+func (r *PaymentRepo) ListAll(ctx context.Context, page, size int) ([]*domain.Payment, int64, error) {
+	if size <= 0 {
+		size = 20
+	}
+	if page <= 0 {
+		page = 1
+	}
+	offset := (page - 1) * size
+
+	var total int64
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM payments`).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("billing.ListAllPayments count: %w", err)
+	}
+
+	q := `SELECT ` + paymentCols + ` FROM payments ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+	rows, err := r.pool.Query(ctx, q, size, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("billing.ListAllPayments: %w", err)
+	}
+	defer rows.Close()
+	var payments []*domain.Payment
+	for rows.Next() {
+		p, err := scanPayment(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("billing.ListAllPayments scan: %w", err)
+		}
+		payments = append(payments, p)
+	}
+	if payments == nil {
+		payments = []*domain.Payment{}
+	}
+	return payments, total, rows.Err()
+}
+
 func (r *PaymentRepo) SumPaidByInvoice(ctx context.Context, invoiceID uuid.UUID) (float64, error) {
 	var sum float64
 	err := r.pool.QueryRow(ctx,

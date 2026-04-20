@@ -96,6 +96,14 @@ func (r *fakeWPRepo) List(_ context.Context, _ domain.ListWPFilter) ([]*domain.W
 	return result, int64(len(result)), nil
 }
 
+func (r *fakeWPRepo) ListAll(_ context.Context, _ domain.WPStatus, _, _ int) ([]*domain.WorkingPaper, int64, error) {
+	var result []*domain.WorkingPaper
+	for _, wp := range r.papers {
+		result = append(result, wp)
+	}
+	return result, int64(len(result)), nil
+}
+
 func (r *fakeWPRepo) ListPendingReview(_ context.Context, _ domain.ReviewerRole, _, _ int) ([]*domain.WorkingPaper, int64, error) {
 	return []*domain.WorkingPaper{}, 0, nil
 }

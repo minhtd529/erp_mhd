@@ -22,7 +22,7 @@ const STATUS_VARIANTS: Record<PaymentStatus, 'warning' | 'success' | 'danger' | 
 export default function PaymentsPage() {
   const qc = useQueryClient();
   const [page, setPage] = React.useState(1);
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['payments', page],
     queryFn: () => paymentService.list({ page }),
   });
@@ -35,7 +35,9 @@ export default function PaymentsPage() {
     <div className="flex flex-col gap-4">
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <PageSpinner /> : (
+          {isLoading ? <PageSpinner /> : isError ? (
+              <div className="text-center text-text-secondary py-8 text-sm">API chưa sẵn sàng. Vui lòng thử lại sau.</div>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -52,8 +54,8 @@ export default function PaymentsPage() {
                   <TableRow key={p.id}>
                     <TableCell className="font-mono text-xs">{p.invoice_id.slice(0, 8)}…</TableCell>
                     <TableCell className="font-medium">{formatCurrency(p.amount)}</TableCell>
-                    <TableCell className="text-xs">{p.method ?? '-'}</TableCell>
-                    <TableCell className="text-xs">{p.paid_at ? formatDate(p.paid_at) : '-'}</TableCell>
+                    <TableCell className="text-xs">{p.payment_method ?? '-'}</TableCell>
+                    <TableCell className="text-xs">{p.payment_date ? formatDate(p.payment_date) : '-'}</TableCell>
                     <TableCell><Badge variant={STATUS_VARIANTS[p.status]}>{STATUS_LABELS[p.status]}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">

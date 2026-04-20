@@ -15,6 +15,8 @@ type WorkingPaperRepository interface {
 	Finalize(ctx context.Context, p FinalizeWPParams) (*WorkingPaper, error)
 	SoftDelete(ctx context.Context, id uuid.UUID, deletedBy uuid.UUID) error
 	List(ctx context.Context, f ListWPFilter) ([]*WorkingPaper, int64, error)
+	// ListAll returns all non-deleted WPs across engagements, optionally filtered by status.
+	ListAll(ctx context.Context, status WPStatus, page, size int) ([]*WorkingPaper, int64, error)
 	// ListPendingReview returns WPs in IN_REVIEW/COMMENTED status where the given role
 	// has not yet approved, so the reviewer can see their queue.
 	ListPendingReview(ctx context.Context, role ReviewerRole, page, size int) ([]*WorkingPaper, int64, error)

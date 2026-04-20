@@ -235,6 +235,26 @@ func (uc *WorkingPaperUseCase) PendingReview(ctx context.Context, req PendingRev
 	return &result, nil
 }
 
+// ListAll returns all working papers across engagements.
+func (uc *WorkingPaperUseCase) ListAll(ctx context.Context, req WPListRequest) (*PaginatedResult[WPResponse], error) {
+	if req.Page == 0 {
+		req.Page = 1
+	}
+	if req.Size == 0 {
+		req.Size = 20
+	}
+	wps, total, err := uc.wpRepo.ListAll(ctx, req.Status, req.Page, req.Size)
+	if err != nil {
+		return nil, err
+	}
+	data := make([]WPResponse, len(wps))
+	for i, wp := range wps {
+		data[i] = toWPResponse(wp)
+	}
+	result := pagination.NewOffsetResult(data, total, req.Page, req.Size)
+	return &result, nil
+}
+
 func (uc *WorkingPaperUseCase) List(ctx context.Context, engagementID uuid.UUID, req WPListRequest) (*PaginatedResult[WPResponse], error) {
 	if req.Page == 0 {
 		req.Page = 1

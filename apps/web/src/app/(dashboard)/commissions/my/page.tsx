@@ -36,7 +36,7 @@ function SummaryCard({ title, value, icon: Icon, color }: { title: string; value
 
 export default function MyCommissionsPage() {
   const [page, setPage] = React.useState(1);
-  const [statusFilter, setStatusFilter] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('all');
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['my-commissions-summary'],
@@ -45,7 +45,7 @@ export default function MyCommissionsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['my-commissions', page, statusFilter],
-    queryFn: () => commissionService.me.list({ page, size: 20, status: statusFilter || undefined }),
+    queryFn: () => commissionService.me.list({ page, size: 20, status: statusFilter === 'all' ? undefined : statusFilter as RecordStatus }),
   });
 
   return (
@@ -108,7 +108,7 @@ export default function MyCommissionsPage() {
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40"><SelectValue placeholder="Tất cả" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tất cả</SelectItem>
+                <SelectItem value="all">Tất cả</SelectItem>
                 {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
               </SelectContent>
             </Select>

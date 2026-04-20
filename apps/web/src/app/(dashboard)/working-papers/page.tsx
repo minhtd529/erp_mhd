@@ -37,7 +37,7 @@ export default function WorkingPapersPage() {
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['working-papers', page, q],
     queryFn: () => api.get<PaginatedResult<WorkingPaper>>('/working-papers', { params: { page, size: 20, q: q || undefined } }).then(r => r.data),
   });
@@ -49,7 +49,9 @@ export default function WorkingPapersPage() {
       </div>
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <PageSpinner /> : (
+          {isLoading ? <PageSpinner /> : isError ? (
+              <div className="text-center text-text-secondary py-8 text-sm">API chưa sẵn sàng. Vui lòng thử lại sau.</div>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>

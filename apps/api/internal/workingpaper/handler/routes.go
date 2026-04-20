@@ -25,6 +25,7 @@ func RegisterRoutes(
 
 	wp := v1.Group("/working-papers", authMW)
 	{
+		wp.GET("", mw.RequireRole("SUPER_ADMIN", "FIRM_PARTNER", "AUDIT_MANAGER", "AUDIT_STAFF"), wpH.ListAll)
 		wp.GET("/pending-review", mw.RequireRole("SUPER_ADMIN", "FIRM_PARTNER", "AUDIT_MANAGER", "AUDIT_STAFF"), wpH.PendingReview)
 		wp.GET("/:id", mw.RequireRole("SUPER_ADMIN", "FIRM_PARTNER", "AUDIT_MANAGER", "AUDIT_STAFF"), wpH.GetByID)
 		wp.PUT("/:id", mw.RequireRole("SUPER_ADMIN", "FIRM_PARTNER", "AUDIT_MANAGER", "AUDIT_STAFF"), wpH.Update)

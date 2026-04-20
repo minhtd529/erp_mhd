@@ -56,7 +56,7 @@ function ExecutiveReport() {
             <KpiRow label="Đang giữ" value={formatCurrency(data.commission_kpis.on_hold)} />
             <KpiRow
               label="% Doanh thu"
-              value={`${data.commission_kpis.commission_pct_of_revenue.toFixed(1)}%`}
+              value={`${(data.commission_kpis.commission_pct_of_revenue ?? 0).toFixed(1)}%`}
               sub="Commission / Revenue"
             />
           </CardContent>

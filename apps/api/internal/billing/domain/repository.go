@@ -33,6 +33,7 @@ type PaymentRepository interface {
 	UpdateStatus(ctx context.Context, id uuid.UUID, status PaymentStatus) (*Payment, error)
 	Clear(ctx context.Context, id uuid.UUID) (*Payment, error)
 	ListByInvoice(ctx context.Context, invoiceID uuid.UUID) ([]*Payment, error)
+	ListAll(ctx context.Context, page, size int) ([]*Payment, int64, error)
 	SumPaidByInvoice(ctx context.Context, invoiceID uuid.UUID) (float64, error)
 }
 

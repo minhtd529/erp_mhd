@@ -22,10 +22,10 @@ export interface Payment {
   id: string;
   invoice_id: string;
   amount: number;
-  method?: string;
+  payment_method?: string;
   status: PaymentStatus;
-  paid_at?: string;
-  reference?: string;
+  payment_date?: string;
+  reference_number?: string;
   created_at: string;
 }
 
@@ -43,9 +43,9 @@ export const invoiceService = {
 export const paymentService = {
   list: (params: { page?: number; invoice_id?: string }) =>
     api.get<PaginatedResult<Payment>>('/payments', { params }).then(r => r.data),
-  record: (data: { invoice_id: string; amount: number; method?: string; reference?: string }) =>
+  record: (data: { invoice_id: string; amount: number; payment_method?: string; reference_number?: string }) =>
     api.post<Payment>('/payments', data).then(r => r.data),
   clear: (id: string) => api.post(`/payments/${id}/clear`).then(r => r.data),
   dispute: (id: string) => api.post(`/payments/${id}/dispute`).then(r => r.data),
-  reverse: (id: string) => api.post(`/payments/${id}/reverse`).then(r => r.data),
+  reverse: (id: string) => api.delete(`/payments/${id}`).then(r => r.data),
 };

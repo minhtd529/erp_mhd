@@ -20,6 +20,16 @@ func NewPaymentHandler(uc *usecase.PaymentUseCase) *PaymentHandler {
 	return &PaymentHandler{uc: uc}
 }
 
+func (h *PaymentHandler) List(c *gin.Context) {
+	page, size := parsePage(c)
+	result, err := h.uc.ListAll(c.Request.Context(), page, size)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
 func (h *PaymentHandler) ListByInvoice(c *gin.Context) {
 	invoiceID, err := uuid.Parse(c.Param("id"))
 	if err != nil {

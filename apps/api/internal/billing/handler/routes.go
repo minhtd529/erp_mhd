@@ -51,6 +51,7 @@ func RegisterRoutes(
 	// Standalone payment operations
 	payments := v1.Group("/payments", authMW)
 	{
+		payments.GET("", requireStaff, paymentH.List)
 		payments.PUT("/:id", requirePartner, paymentH.Update)
 		payments.POST("/:id/clear", requirePartner, paymentH.Clear)
 		payments.POST("/:id/dispute", requirePartner, paymentH.Dispute)

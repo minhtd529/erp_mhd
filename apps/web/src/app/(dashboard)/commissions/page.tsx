@@ -24,11 +24,11 @@ const STATUS_VARIANTS: Record<RecordStatus, 'warning' | 'default' | 'success' | 
 export default function CommissionsPage() {
   const qc = useQueryClient();
   const [page, setPage] = React.useState(1);
-  const [statusFilter, setStatusFilter] = React.useState('accrued');
+  const [statusFilter, setStatusFilter] = React.useState('all');
 
   const { data, isLoading } = useQuery({
     queryKey: ['commission-records', page, statusFilter],
-    queryFn: () => commissionService.records.list({ page, size: 20, status: statusFilter || undefined }),
+    queryFn: () => commissionService.records.list({ page, size: 20, status: statusFilter === 'all' ? undefined : statusFilter as RecordStatus }),
   });
 
   const approveMut = useMutation({
@@ -62,7 +62,7 @@ export default function CommissionsPage() {
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-44"><SelectValue placeholder="Tất cả" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tất cả</SelectItem>
+                <SelectItem value="all">Tất cả</SelectItem>
                 {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
               </SelectContent>
             </Select>
