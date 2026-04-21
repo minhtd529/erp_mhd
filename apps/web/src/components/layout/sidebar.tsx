@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth';
 import {
   LayoutDashboard, Users, Building2, Briefcase, Clock, FileText,
   DollarSign, FolderOpen, TrendingUp, BarChart3, Settings, LogOut, ShieldCheck, UserCog, GitBranch, ScrollText,
+  Network, Landmark, Layers, Grid3x3, Share2,
 } from 'lucide-react';
 
 interface NavItem {
@@ -21,6 +22,11 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Nhân viên', href: '/employees', icon: Users, roles: ['FIRM_PARTNER', 'AUDIT_MANAGER', 'SUPER_ADMIN'] },
   { label: 'Người dùng & Vai trò', href: '/users', icon: UserCog, roles: ['SUPER_ADMIN', 'FIRM_PARTNER'] },
   { label: 'Chi nhánh & Phòng ban', href: '/branches', icon: GitBranch, roles: ['SUPER_ADMIN', 'FIRM_PARTNER'] },
+  // HRM Organization
+  { label: 'HRM — Chi nhánh', href: '/admin/hrm/organization/branches', icon: Landmark, roles: ['SUPER_ADMIN', 'CHAIRMAN', 'CEO', 'HR_MANAGER', 'HEAD_OF_BRANCH'] },
+  { label: 'HRM — Phòng ban', href: '/admin/hrm/organization/departments', icon: Layers, roles: ['SUPER_ADMIN', 'CHAIRMAN', 'CEO', 'HR_MANAGER'] },
+  { label: 'HRM — Ma trận', href: '/admin/hrm/organization/matrix', icon: Grid3x3, roles: ['SUPER_ADMIN', 'CHAIRMAN', 'CEO', 'HR_MANAGER'] },
+  { label: 'HRM — Sơ đồ tổ chức', href: '/admin/hrm/organization/org-chart', icon: Share2, roles: ['SUPER_ADMIN', 'CHAIRMAN', 'CEO', 'HR_MANAGER'] },
   { label: 'Hợp đồng', href: '/engagements', icon: Briefcase },
   { label: 'Chấm công', href: '/timesheets', icon: Clock },
   { label: 'Hóa đơn', href: '/billing/invoices', icon: FileText },
