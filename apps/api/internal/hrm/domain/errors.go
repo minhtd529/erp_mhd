@@ -3,7 +3,10 @@ package domain
 import "errors"
 
 var (
-	ErrEmployeeNotFound     = errors.New("EMPLOYEE_NOT_FOUND")
-	ErrDuplicateEmail       = errors.New("DUPLICATE_EMAIL")
-	ErrInvalidStateTransition = errors.New("INVALID_STATE_TRANSITION")
+	// Organization errors
+	ErrBranchNotFound      = errors.New("BRANCH_NOT_FOUND")
+	ErrDeptNotFound        = errors.New("DEPARTMENT_NOT_FOUND")
+	ErrBranchDeptNotFound  = errors.New("BRANCH_DEPT_NOT_FOUND")
+	ErrDuplicateBranchDept = errors.New("DUPLICATE_BRANCH_DEPT")
+	ErrInsufficientPermission = errors.New("INSUFFICIENT_PERMISSION")
 )

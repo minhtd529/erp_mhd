@@ -180,9 +180,9 @@ func main() {
 	contactH := crmhandler.NewContactHandler(contactUC)
 
 	// ── HRM module ────────────────────────────────────────────────────────────
-	hrmRepo := hrmrepo.New(db.Pool)
-	employeeUC := hrmusecase.NewEmployeeUseCase(hrmRepo, auditLogger, cfg.HRM.BankEncryptionKey)
-	employeeH := hrmhandler.NewEmployeeHandler(employeeUC)
+	hrmOrgRepo := hrmrepo.NewOrgRepo(db.Pool)
+	hrmOrgUC := hrmusecase.NewOrgUseCase(hrmOrgRepo, auditLogger)
+	hrmOrgH := hrmhandler.NewOrgHandler(hrmOrgUC)
 
 	// ── Org module (branches & departments) ───────────────────────────────────
 	branchRepo := orgrepo.NewBranchRepo(db.Pool)
@@ -347,7 +347,7 @@ func main() {
 	v1.Use(require2FA)
 	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, pushH, auditH, authMW)
 	crmhandler.RegisterRoutes(v1, clientH, contactH, authMW)
-	hrmhandler.RegisterRoutes(v1, employeeH, authMW)
+	hrmhandler.RegisterRoutes(v1, hrmOrgH, authMW)
 	orghandler.RegisterRoutes(v1, branchH, deptH, authMW)
 	enghandler.RegisterRoutes(v1, engH, teamH, taskH, costH, authMW)
 	tshandler.RegisterRoutes(v1, tsH, entryH, attendanceH, authMW)
