@@ -184,6 +184,18 @@ func main() {
 	hrmOrgUC := hrmusecase.NewOrgUseCase(hrmOrgRepo, auditLogger)
 	hrmOrgH := hrmhandler.NewOrgHandler(hrmOrgUC)
 
+	hrmEmpRepo := hrmrepo.NewEmployeeRepo(db.Pool)
+	hrmDepRepo := hrmrepo.NewDependentRepo(db.Pool)
+	hrmConRepo := hrmrepo.NewContractRepo(db.Pool)
+	hrmEmpUC := hrmusecase.NewEmployeeUseCase(hrmEmpRepo, auditLogger)
+	hrmDepUC := hrmusecase.NewDependentUseCase(hrmDepRepo, auditLogger)
+	hrmConUC := hrmusecase.NewContractUseCase(hrmConRepo, hrmEmpRepo, auditLogger)
+	hrmProfUC := hrmusecase.NewProfileUseCase(hrmEmpRepo, auditLogger)
+	hrmEmpH := hrmhandler.NewEmployeeHandler(hrmEmpUC)
+	hrmDepH := hrmhandler.NewDependentHandler(hrmDepUC)
+	hrmConH := hrmhandler.NewContractHandler(hrmConUC)
+	hrmProfH := hrmhandler.NewProfileHandler(hrmProfUC)
+
 	// ── Org module (branches & departments) ───────────────────────────────────
 	branchRepo := orgrepo.NewBranchRepo(db.Pool)
 	deptRepo := orgrepo.NewDeptRepo(db.Pool)
@@ -347,7 +359,7 @@ func main() {
 	v1.Use(require2FA)
 	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, pushH, auditH, authMW)
 	crmhandler.RegisterRoutes(v1, clientH, contactH, authMW)
-	hrmhandler.RegisterRoutes(v1, hrmOrgH, authMW)
+	hrmhandler.RegisterRoutes(v1, hrmOrgH, hrmEmpH, hrmDepH, hrmConH, hrmProfH, authMW)
 	orghandler.RegisterRoutes(v1, branchH, deptH, authMW)
 	enghandler.RegisterRoutes(v1, engH, teamH, taskH, costH, authMW)
 	tshandler.RegisterRoutes(v1, tsH, entryH, attendanceH, authMW)
