@@ -2,6 +2,8 @@
 ## ERP System — MDH Audit Firm
 **Version:** 1.0 | **Based on:** HRM_SPEC_v1.4.md | **Rule:** No feature ships without satisfying all applicable DoD items.
 
+> **Migration numbering note (2026-04-21):** SPEC v1.4 originally planned HRM migrations 000019–000026. After implementation started, migration 000019 was already occupied by `000019_working_papers`. All HRM migrations shifted +1: they now occupy 000020–000027. All references in this document have been updated accordingly.
+
 ---
 
 > This document defines the minimum quality bar for every artifact produced during HRM implementation. Before marking any task DONE, run through the applicable checklist. Partial completion = not done.
@@ -10,7 +12,7 @@
 
 ## Per Migration Checklist
 
-Apply to each of the 8 migrations: 000019, 000020, 000021, 000022, 000023, 000024, 000025, 000026.
+Apply to each of the 8 migrations: 000020, 000021, 000022, 000023, 000024, 000025, 000026, 000027.
 
 - [ ] Both `.up.sql` and `.down.sql` files present in `apps/api/migrations/`
 - [ ] Filename follows `000NNN_snake_case.{up,down}.sql` format
@@ -18,7 +20,7 @@ Apply to each of the 8 migrations: 000019, 000020, 000021, 000022, 000023, 00002
 - [ ] Round-trip test succeeds: `make migrate-up && make migrate-down && make migrate-up`
 - [ ] No data loss on rollback (verified on dev DB with test data)
 - [ ] Migration tested on a **clean DB** (migrate from 000001 to head, not just incremental)
-- [ ] Seed data (if any) is ONLY in migration 000026, not in 000019–000025
+- [ ] Seed data (if any) is ONLY in migration 000027, not in 000020–000026
 - [ ] Indexes created for ALL foreign key columns
 - [ ] CHECK constraints defined for ALL enum/status columns
 - [ ] No modification to any previously committed migration (immutability rule)
@@ -29,21 +31,21 @@ Apply to each of the 8 migrations: 000019, 000020, 000021, 000022, 000023, 00002
 
 | Migration | Extra DoD Items |
 |---|---|
-| 000019 | uidx_branches_head_office WHERE is_head_office = true exists |
-| 000020 | fn_employees_set_code() trigger fires on INSERT, generates NV{YY}-{SEQ4} |
-| 000020 | salary_history immutability: UPDATE and DELETE rules return nothing |
-| 000020 | All 4 encrypted columns use `_encrypted` suffix |
-| 000021 | cpe_requirements_by_role table created |
-| 000022 | uidx_independence_annual partial index exists (ANNUAL per employee per year) |
-| 000022 | chk_peer_review_self constraint: reviewer_id ≠ reviewee_id |
-| 000023 | employee_ot_summary_year VIEW created |
-| 000023 | ALTER timesheets adds ot_hours, ot_approved, ot_request_id |
-| 000024 | uidx_provisioning_pending WHERE status = 'PENDING' exists |
-| 000025 | fn_expense_claims_set_number() trigger creates PC{YY}-{SEQ4} |
-| 000026 | 2 branches (HO, HCM), 5 departments, 7-entry branch_departments matrix |
-| 000026 | insurance_rate_config 2024 seed with kpcd_employer_pct = 2.00 |
-| 000026 | Holidays 2026–2030 seeded (at minimum 2026: 12 national holidays) |
-| 000026 | CPE requirements seeded for PARTNER, SENIOR_AUDITOR, JUNIOR_AUDITOR |
+| 000020 | uidx_branches_head_office WHERE is_head_office = true exists |
+| 000021 | fn_employees_set_code() trigger fires on INSERT, generates NV{YY}-{SEQ4} |
+| 000021 | salary_history immutability: UPDATE and DELETE rules return nothing |
+| 000021 | All 4 encrypted columns use `_encrypted` suffix |
+| 000022 | cpe_requirements_by_role table created |
+| 000023 | uidx_independence_annual partial index exists (ANNUAL per employee per year) |
+| 000023 | chk_peer_review_self constraint: reviewer_id ≠ reviewee_id |
+| 000024 | employee_ot_summary_year VIEW created |
+| 000024 | ALTER timesheets adds ot_hours, ot_approved, ot_request_id |
+| 000025 | uidx_provisioning_pending WHERE status = 'PENDING' exists |
+| 000026 | fn_expense_claims_set_number() trigger creates PC{YY}-{SEQ4} |
+| 000027 | 2 branches (HO, HCM), 5 departments, 7-entry branch_departments matrix |
+| 000027 | insurance_rate_config 2024 seed with kpcd_employer_pct = 2.00 |
+| 000027 | Holidays 2026–2030 seeded (at minimum 2026: 12 national holidays) |
+| 000027 | CPE requirements seeded for PARTNER, SENIOR_AUDITOR, JUNIOR_AUDITOR |
 
 ---
 

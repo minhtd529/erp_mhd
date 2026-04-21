@@ -2,6 +2,8 @@
 ## ERP System — MDH Audit Firm
 **Version:** 1.0 | **Based on:** HRM_SPEC_v1.4.md | **Run:** Before declaring each sprint complete
 
+> **Migration numbering note (2026-04-21):** SPEC v1.4 originally planned HRM migrations 000019–000026. After implementation started, migration 000019 was already occupied by `000019_working_papers`. All HRM migrations shifted +1: they now occupy 000020–000027. All references in this document have been updated accordingly.
+
 ---
 
 > Run this checklist at sprint close. If any item fails, STOP — implementation has drifted from SPEC. Follow the drift resolution protocol (§Drift Resolution at bottom).
@@ -452,7 +454,7 @@ For each sprint, verify no Sprint N+1 code was committed in Sprint N:
 
 ```bash
 # Check git log for sprint boundary violations (example for Sprint 1)
-git log --oneline sprint1-start..sprint1-end -- apps/api/migrations/000021* apps/api/migrations/000022* apps/api/migrations/000023* apps/api/migrations/000024* apps/api/migrations/000025*
+git log --oneline sprint1-start..sprint1-end -- apps/api/migrations/000022* apps/api/migrations/000023* apps/api/migrations/000024* apps/api/migrations/000025* apps/api/migrations/000026*
 # Expected: no output (Sprint 2+ migrations not committed in Sprint 1)
 ```
 
@@ -461,7 +463,7 @@ git log --oneline sprint1-start..sprint1-end -- apps/api/migrations/000021* apps
 ## §22 Bootstrap
 
 - [ ] All items in SPEC §22.7 bootstrap checklist satisfied
-- [ ] Migrations 000019–000026 applied successfully on target environment
+- [ ] Migrations 000020–000027 applied successfully on target environment
 - [ ] SUPER_ADMIN user created with TOTP setup
 - [ ] 6 initial users (CHAIRMAN, CEO, HR_MANAGER, HoB HCM, Partner HO, Partner HCM) created
 - [ ] All employees have at least 1 employment contract
@@ -480,8 +482,8 @@ git log --oneline sprint1-start..sprint1-end -- apps/api/migrations/000021* apps
 4. **Enum value in DB as lowercase or Vietnamese** → Bug: convention violation
 5. **Decryption happening in SQL query** → Bug: security violation
 6. **SUPER_ADMIN check in business logic** → Bug: middleware handles this
-7. **Migration 000019–000026 out of sequence or with gaps** → Bug: numbering violation
-8. **Seed data in migrations 000019–000025** → Bug: only 000026 can have seed data
+7. **Migration 000020–000027 out of sequence or with gaps** → Bug: numbering violation
+8. **Seed data in migrations 000020–000026** → Bug: only 000027 can have seed data
 9. **SELECT * in any production query** → Bug: performance/security violation
 10. **TODO/FIXME in production code path** → Bug: incomplete implementation
 

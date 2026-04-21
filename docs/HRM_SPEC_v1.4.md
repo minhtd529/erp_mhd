@@ -6,6 +6,8 @@
 **Status:** Draft — Pending Review  
 **Author:** minhtd529@gmail.com  
 
+> **Migration numbering note (2026-04-21):** This SPEC originally planned HRM migrations 000019–000026. After implementation started, migration 000019 was already occupied by `000019_working_papers`. All HRM migrations shifted +1: they now occupy 000020–000027. All references in this document have been updated accordingly.
+
 ---
 
 ## Table of Contents
@@ -70,7 +72,7 @@ Công ty kiểm toán có những yêu cầu đặc thù so với HRM thông th�
 ### 1.3 Technical Scope
 
 - **22 bảng mới/thay đổi** trong database PostgreSQL
-- **8 migrations** (000019 → 000026)
+- **8 migrations** (000020 → 000027)
 - **80+ API endpoints** RESTful JSON
 - **Mã hóa AES-256-GCM** cho các trường PII nhạy cảm
 - **Ước tính:** 4–6 tuần (5 sprints)
@@ -247,7 +249,7 @@ Chủ tịch HĐQT (Chairman)
 
 ### 4.1 Overview
 
-Bảng `employees` là trung tâm của module HRM. Trong Phase 1, ~40 cột mới được thêm vào bảng hiện tại qua migration 000020.
+Bảng `employees` là trung tâm của module HRM. Trong Phase 1, ~40 cột mới được thêm vào bảng hiện tại qua migration 000021.
 
 **Mã nhân viên:** Format `NV{YY}-{SEQ4}` ví dụ `NV26-0001`
 - Generated bằng PostgreSQL trigger `trg_employees_set_code`
@@ -806,7 +808,7 @@ GROUP BY employee_id, EXTRACT(YEAR FROM ot_date);
 
 ### 7.7 Cột OT Bổ Sung Trên timesheets
 
-Migration 000023 ALTER bảng `timesheets` hiện tại:
+Migration 000024 ALTER bảng `timesheets` hiện tại:
 
 ```sql
 ALTER TABLE timesheets
@@ -1065,7 +1067,7 @@ DRAFT → SUBMITTED → MANAGER_APPROVED → HR_APPROVED → PAID
 ### 11.1 ALTER branches
 
 ```sql
--- Migration 000019
+-- Migration 000020
 ALTER TABLE branches
   ADD COLUMN IF NOT EXISTS is_head_office         BOOLEAN     NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS city                   VARCHAR(100),
@@ -1811,18 +1813,18 @@ ON CONFLICT (holiday_date) DO NOTHING;
 
 | Migration | Tên | Nội dung |
 |---|---|---|
-| 000019 | hrm_organization | ALTER branches, departments; CREATE branch_departments |
-| 000020 | hrm_employees_extended | ALTER employees (40+ cols); triggers; CREATE dependents, salary_history, contracts, insurance_rates |
-| 000021 | hrm_professional | CREATE certifications, training_courses, training_records, cpe_requirements |
-| 000022 | hrm_performance | CREATE performance_reviews, peer_reviews, independence_declarations |
-| 000023 | hrm_time_leave | CREATE holidays, leave_balances, leave_requests; ALTER timesheets; CREATE ot_requests, VIEW |
-| 000024 | hrm_provisioning | CREATE user_provisioning_requests, offboarding_checklists |
-| 000025 | hrm_expenses | CREATE expense_claims (+ trigger), expense_claim_items |
-| 000026 | hrm_seed_data | Seed branches, departments, matrix, insurance rates, CPE reqs, holidays 2026–2030 |
+| 000020 | hrm_organization | ALTER branches, departments; CREATE branch_departments |
+| 000021 | hrm_employees_extended | ALTER employees (40+ cols); triggers; CREATE dependents, salary_history, contracts, insurance_rates |
+| 000022 | hrm_professional | CREATE certifications, training_courses, training_records, cpe_requirements |
+| 000023 | hrm_performance | CREATE performance_reviews, peer_reviews, independence_declarations |
+| 000024 | hrm_time_leave | CREATE holidays, leave_balances, leave_requests; ALTER timesheets; CREATE ot_requests, VIEW |
+| 000025 | hrm_provisioning | CREATE user_provisioning_requests, offboarding_checklists |
+| 000026 | hrm_expenses | CREATE expense_claims (+ trigger), expense_claim_items |
+| 000027 | hrm_seed_data | Seed branches, departments, matrix, insurance rates, CPE reqs, holidays 2026–2030 |
 
-### 12.2 Migration 000019: hrm_organization
+### 12.2 Migration 000020: hrm_organization
 
-**File:** `000019_hrm_organization.up.sql` / `000019_hrm_organization.down.sql`
+**File:** `000020_hrm_organization.up.sql` / `000020_hrm_organization.down.sql`
 
 **Up:** ALTER branches (add HRM fields), ALTER departments (add code/dept_type), CREATE branch_departments, uidx_branches_head_office.
 
@@ -1842,9 +1844,9 @@ ALTER TABLE branches
 **Dependencies:** branches, departments (existing)
 **Rollback risk:** Low — no FK references yet. Seed data (code values) lost on down.
 
-### 12.3 Migration 000020: hrm_employees_extended
+### 12.3 Migration 000021: hrm_employees_extended
 
-**File:** `000020_hrm_employees_extended.up.sql` / `000020_hrm_employees_extended.down.sql`
+**File:** `000021_hrm_employees_extended.up.sql` / `000021_hrm_employees_extended.down.sql`
 
 **Up:** All employee column additions, fn_employees_set_code trigger, CREATE employee_dependents, insurance_rate_config, employee_salary_history (with immutable rules), employment_contracts. All indexes.
 
@@ -1859,10 +1861,10 @@ DROP TABLE IF EXISTS employee_dependents;
 -- DROP all added columns from employees (all 40+ columns listed explicitly)
 ```
 
-**Dependencies:** 000019
+**Dependencies:** 000020
 **Rollback risk:** High — employee data loss. Never rollback on production.
 
-### 12.4 Migration 000021: hrm_professional
+### 12.4 Migration 000022: hrm_professional
 
 **Up:** CREATE certifications, training_courses, training_records, cpe_requirements_by_role.
 
@@ -1874,9 +1876,9 @@ DROP TABLE IF EXISTS training_courses;
 DROP TABLE IF EXISTS certifications;
 ```
 
-**Dependencies:** 000020 (employees)
+**Dependencies:** 000021 (employees)
 
-### 12.5 Migration 000022: hrm_performance
+### 12.5 Migration 000023: hrm_performance
 
 **Up:** CREATE performance_reviews, engagement_peer_reviews, independence_declarations.
 
@@ -1887,9 +1889,9 @@ DROP TABLE IF EXISTS engagement_peer_reviews;
 DROP TABLE IF EXISTS performance_reviews;
 ```
 
-**Dependencies:** 000020 (employees), engagements (existing)
+**Dependencies:** 000021 (employees), engagements (existing)
 
-### 12.6 Migration 000023: hrm_time_leave
+### 12.6 Migration 000024: hrm_time_leave
 
 **Up:** CREATE holidays, leave_balances, leave_requests; ALTER timesheets (add ot_hours, ot_approved, ot_request_id); CREATE ot_requests; CREATE VIEW employee_ot_summary_year.
 
@@ -1906,10 +1908,10 @@ DROP TABLE IF EXISTS leave_balances;
 DROP TABLE IF EXISTS holidays;
 ```
 
-**Dependencies:** 000020 (employees), timesheets (existing)
+**Dependencies:** 000021 (employees), timesheets (existing)
 **Rollback risk:** Holiday seed data lost. Re-seed required after re-up.
 
-### 12.7 Migration 000024: hrm_provisioning
+### 12.7 Migration 000025: hrm_provisioning
 
 **Up:** CREATE user_provisioning_requests, offboarding_checklists.
 
@@ -1919,9 +1921,9 @@ DROP TABLE IF EXISTS offboarding_checklists;
 DROP TABLE IF EXISTS user_provisioning_requests;
 ```
 
-**Dependencies:** 000020, users (existing)
+**Dependencies:** 000021, users (existing)
 
-### 12.8 Migration 000025: hrm_expenses
+### 12.8 Migration 000026: hrm_expenses
 
 **Up:** CREATE expense_claims + trigger fn_expense_claims_set_number, CREATE expense_claim_items.
 
@@ -1933,9 +1935,9 @@ DROP FUNCTION IF EXISTS fn_expense_claims_set_number();
 DROP TABLE IF EXISTS expense_claims;
 ```
 
-**Dependencies:** 000020, engagements (existing)
+**Dependencies:** 000021, engagements (existing)
 
-### 12.9 Migration 000026: hrm_seed_data
+### 12.9 Migration 000027: hrm_seed_data
 
 **Up:** INSERT branches (ON CONFLICT DO NOTHING), INSERT departments, INSERT branch_departments matrix, INSERT insurance_rate_config, INSERT cpe_requirements_by_role, INSERT holidays 2026–2030.
 
@@ -1946,7 +1948,7 @@ DELETE FROM cpe_requirements_by_role WHERE effective_from = '2024-01-01';
 -- Leave branches/departments intact (FK risk)
 ```
 
-**Dependencies:** 000019, 000021, 000023
+**Dependencies:** 000020, 000022, 000024
 **Note:** Use ON CONFLICT DO NOTHING for idempotency — safe to re-run.
 
 ---
@@ -2896,9 +2898,9 @@ func NewProvisioningRequest(employeeID UUID, role string) ProvisioningRequest
 ### Sprint 1: Organization + Employees (Tuần 1–2)
 
 **Deliverables:**
-- [ ] Migration 000019: hrm_organization
-- [ ] Migration 000020: hrm_employees_extended
-- [ ] Migration 000026 (partial): seed branches, departments, matrix
+- [ ] Migration 000020: hrm_organization
+- [ ] Migration 000021: hrm_employees_extended
+- [ ] Migration 000027 (partial): seed branches, departments, matrix
 - [ ] API: /hrm/organization/* (10 endpoints)
 - [ ] API: /hrm/employees (CRUD, 8 endpoints)
 - [ ] API: /my-profile (2 endpoints)
@@ -2923,8 +2925,8 @@ func NewProvisioningRequest(employeeID UUID, role string) ProvisioningRequest
 ### Sprint 2: Provisioning + Certifications/Training (Tuần 3–4)
 
 **Deliverables:**
-- [ ] Migration 000021: hrm_professional
-- [ ] Migration 000024: hrm_provisioning
+- [ ] Migration 000022: hrm_professional
+- [ ] Migration 000025: hrm_provisioning
 - [ ] API: /hrm/user-provisioning-requests (9 endpoints)
 - [ ] API: /hrm/employees/:id/certifications (5 endpoints)
 - [ ] API: /hrm/certifications/expiring
@@ -2953,7 +2955,7 @@ func NewProvisioningRequest(employeeID UUID, role string) ProvisioningRequest
 ### Sprint 3: Performance Reviews + Independence (Tuần 5)
 
 **Deliverables:**
-- [ ] Migration 000022: hrm_performance
+- [ ] Migration 000023: hrm_performance
 - [ ] API: /hrm/performance/reviews (6 endpoints)
 - [ ] API: /hrm/performance/peer-reviews (2 endpoints)
 - [ ] API: /hrm/independence (6 endpoints)
@@ -2977,8 +2979,8 @@ func NewProvisioningRequest(employeeID UUID, role string) ProvisioningRequest
 ### Sprint 4: Leave + OT + Holidays (Tuần 6)
 
 **Deliverables:**
-- [ ] Migration 000023: hrm_time_leave
-- [ ] Migration 000026 (remaining): seed holidays 2026–2030
+- [ ] Migration 000024: hrm_time_leave
+- [ ] Migration 000027 (remaining): seed holidays 2026–2030
 - [ ] API: /hrm/holidays (4 endpoints)
 - [ ] API: /hrm/leave/balances, requests (10 endpoints)
 - [ ] API: /my-leave (4 endpoints)
@@ -3006,7 +3008,7 @@ func NewProvisioningRequest(employeeID UUID, role string) ProvisioningRequest
 ### Sprint 5: Expenses + Reports + Polish (Tuần 7)
 
 **Deliverables:**
-- [ ] Migration 000025: hrm_expenses
+- [ ] Migration 000026: hrm_expenses
 - [ ] API: /my-expenses (8 endpoints)
 - [ ] API: /hrm/expenses (5 endpoints)
 - [ ] API: /hrm/reports/* (10 report endpoints)
@@ -3041,7 +3043,7 @@ func NewProvisioningRequest(employeeID UUID, role string) ProvisioningRequest
 Quy trình bootstrap là sequence các bước thủ công + tự động để khởi tạo hệ thống từ đầu với dữ liệu thực tế.
 
 **Điều kiện tiên quyết:**
-- Database migration 000001–000026 đã chạy thành công
+- Database migration 000001–000027 đã chạy thành công
 - Seed data cơ bản đã có (branches, departments, matrix, insurance rates)
 
 ### 22.2 Bước 1: Tạo SUPER_ADMIN User (Thủ công)
@@ -3142,7 +3144,7 @@ Tháng 1 (hoặc tháng bắt đầu hệ thống):
 ### 22.7 Checklist Bootstrap Hoàn Tất
 
 ```
-[ ] Migration 000019–000026 đã run thành công
+[ ] Migration 000020–000027 đã run thành công
 [ ] SUPER_ADMIN user đã tạo và setup TOTP
 [ ] Branches (HO, HCM) đã có đầy đủ thông tin địa chỉ
 [ ] Departments (5) đã có code đúng

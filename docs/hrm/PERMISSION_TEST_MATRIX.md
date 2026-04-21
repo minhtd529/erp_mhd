@@ -2,6 +2,8 @@
 ## ERP System — MDH Audit Firm
 **Version:** 1.0 | **Based on:** HRM_SPEC_v1.4.md §15 | **Usage:** Drives integration tests and manual QA
 
+> **Migration numbering note (2026-04-21):** SPEC v1.4 originally planned HRM migrations 000019–000026. After implementation started, migration 000019 was already occupied by `000019_working_papers`. All HRM migrations shifted +1: they now occupy 000020–000027. All references in this document have been updated accordingly.
+
 ---
 
 ## Legend

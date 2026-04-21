@@ -2,6 +2,8 @@
 ## ERP System — MDH Audit Firm
 **Version:** 1.0 | **Based on:** HRM_SPEC_v1.4.md | **Purpose:** How to work with Claude Code during HRM implementation
 
+> **Migration numbering note (2026-04-21):** SPEC v1.4 originally planned HRM migrations 000019–000026. After implementation started, migration 000019 was already occupied by `000019_working_papers`. All HRM migrations shifted +1: they now occupy 000020–000027. All references in this document have been updated accordingly.
+
 ---
 
 > This playbook governs all Claude Code sessions during the 4–6 week HRM implementation. Follow the session ritual, use the prompt templates, respect the phased execution rule, and report in the standard format. Deviations require explicit user approval.
@@ -87,7 +89,7 @@ Requirements:
 
 Dependencies: {LIST_PRIOR_MIGRATIONS_REQUIRED}
 
-Do NOT include seed data in this migration (seed data goes in 000026 only).
+Do NOT include seed data in this migration (seed data goes in 000027 only).
 After writing, run: make migrate-lint && make migrate-up && make migrate-down && make migrate-up
 Report results. STOP after Phase 1.
 ```
@@ -276,7 +278,7 @@ These are explicit prohibitions. If any of these are about to happen, STOP and r
 
 ### Database
 - ❌ Do NOT modify any migration file after it's committed to `main`
-- ❌ Do NOT add seed data to migrations 000019–000025 (only 000026)
+- ❌ Do NOT add seed data to migrations 000020–000026 (only 000027)
 - ❌ Do NOT skip the round-trip migration test before committing
 
 ### Testing
@@ -313,7 +315,7 @@ Stop work and notify user immediately when:
    - Example: "The independence declaration form references a conflict screening API marked as Phase 2 deferred"
 
 7. **Migration risk too high:** A migration would have irreversible effects on production data
-   - Example: "Migration 000020 down would drop all employee extended data — need explicit approval to proceed"
+   - Example: "Migration 000021 down would drop all employee extended data — need explicit approval to proceed"
 
 ---
 

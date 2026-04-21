@@ -2,6 +2,8 @@
 ## ERP System — MDH Audit Firm
 **Version:** 1.0 | **Based on:** HRM_SPEC_v1.4.md | **Enforcement:** Mandatory — no exceptions without user approval
 
+> **Migration numbering note (2026-04-21):** SPEC v1.4 originally planned HRM migrations 000019–000026. After implementation started, migration 000019 was already occupied by `000019_working_papers`. All HRM migrations shifted +1: they now occupy 000020–000027. All references in this document have been updated accordingly.
+
 ---
 
 > These rules exist to prevent drift, reinvention, and quality failures during the 4–6 week HRM implementation. Claude Code MUST follow every rule in this document. If a rule conflicts with an implementation requirement, STOP and escalate to the user before proceeding.
@@ -21,8 +23,8 @@ Reference: `scripts/migration-lint.sh`, SPEC §12, CLAUDE.md §Migration Rules
 
 ### 1.2 File Format
 All migration files must follow: `000NNN_snake_case_name.{up,down}.sql`
-- Correct: `000019_hrm_organization.up.sql`
-- Wrong: `19_hrm_org.sql`, `000019_HRMOrganization.up.sql`
+- Correct: `000020_hrm_organization.up.sql`
+- Wrong: `19_hrm_org.sql`, `000020_HRMOrganization.up.sql`
 
 ### 1.3 Up/Down Pair
 Every migration MUST have both `.up.sql` and `.down.sql`. No exceptions.
@@ -30,7 +32,7 @@ Every migration MUST have both `.up.sql` and `.down.sql`. No exceptions.
 - `down.sql`: Fully reverses `up.sql` with no data loss on dev/staging
 
 ### 1.4 Sequential Numbering
-- HRM migrations: 000019 → 000026 (no gaps)
+- HRM migrations: 000020 → 000027 (no gaps)
 - Check existing sequence before writing: `ls apps/api/migrations/*.up.sql | sort`
 - Use scaffold: `make migrate-create NAME=hrm_expenses`
 
@@ -43,9 +45,9 @@ make migrate-lint
 ```
 
 ### 1.6 Seed Data in Separate Migration
-- Business seed data (branches, holidays, CPE requirements) → migration 000026 only
-- Schema migrations (000019–000025) MUST NOT contain INSERT statements (except for triggers/functions)
-- Migration 000026 is the ONLY seed migration — See SPEC §12.9
+- Business seed data (branches, holidays, CPE requirements) → migration 000027 only
+- Schema migrations (000020–000026) MUST NOT contain INSERT statements (except for triggers/functions)
+- Migration 000027 is the ONLY seed migration — See SPEC §12.9
 
 ### 1.7 Rollback Risk Classification
 Document risk in migration comments:
@@ -526,8 +528,8 @@ Reference: CLAUDE.md §Git rules
 
 ### 9.1 One Migration = One Commit
 ```bash
-git add apps/api/migrations/000019_hrm_organization.{up,down}.sql
-git commit -m "feat(hrm): add migration 000019 hrm_organization schema"
+git add apps/api/migrations/000020_hrm_organization.{up,down}.sql
+git commit -m "feat(hrm): add migration 000020 hrm_organization schema"
 ```
 
 ### 9.2 Commit Message Format
@@ -555,7 +557,7 @@ Examples:
 
 ### 9.4 PR Scope
 One logical feature per PR. Examples:
-- "Sprint 1: Migrations 000019 + 000020 + organization API + employee API"
+- "Sprint 1: Migrations 000020 + 000021 + organization API + employee API"
 - "Sprint 2: Provisioning workflow (HCM + HO + emergency)"
 - NOT: "HRM everything" in one massive PR
 

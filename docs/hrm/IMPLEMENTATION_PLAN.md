@@ -2,6 +2,8 @@
 ## ERP System — MDH Audit Firm
 **Version:** 1.0 | **Based on:** HRM_SPEC_v1.4.md | **Date:** 2026-04-21
 
+> **Migration numbering note (2026-04-21):** SPEC v1.4 originally planned HRM migrations 000019–000026. After implementation started, migration 000019 was already occupied by `000019_working_papers`. All HRM migrations shifted +1: they now occupy 000020–000027. All references in this document have been updated accordingly.
+
 ---
 
 ## Executive Roadmap (Gantt-Style Timeline)
@@ -18,13 +20,13 @@ Week 7  │ Sprint 5 ██████████████████
 
 | Sprint | Focus | Weeks | Story Points | Migrations |
 |---|---|---|---|---|
-| Sprint 1 | Organization + Employees | 1–2 | ~40 SP | 000019, 000020, 000026 (partial) |
-| Sprint 2 | Provisioning + Certifications/Training | 3–4 | ~35 SP | 000021, 000024 |
-| Sprint 3 | Performance Reviews + Independence | 5 | ~20 SP | 000022 |
-| Sprint 4 | Leave + OT + Holidays | 6 | ~25 SP | 000023, 000026 (remaining) |
-| Sprint 5 | Expenses + Reports + Polish | 7 | ~25 SP | 000025 |
+| Sprint 1 | Organization + Employees | 1–2 | ~40 SP | 000020, 000021, 000027 (partial) |
+| Sprint 2 | Provisioning + Certifications/Training | 3–4 | ~35 SP | 000022, 000025 |
+| Sprint 3 | Performance Reviews + Independence | 5 | ~20 SP | 000023 |
+| Sprint 4 | Leave + OT + Holidays | 6 | ~25 SP | 000024, 000027 (remaining) |
+| Sprint 5 | Expenses + Reports + Polish | 7 | ~25 SP | 000026 |
 
-**Total: 4–6 weeks, 8 migrations (000019–000026), 80+ endpoints, 30+ UI pages**
+**Total: 4–6 weeks, 8 migrations (000020–000027), 80+ endpoints, 30+ UI pages**
 
 > **Sprint boundary rule:** No code from Sprint N+1 may be committed in Sprint N.
 > If a dependency is discovered, escalate immediately (see CLAUDE_CODE_PLAYBOOK.md §Escalation).
@@ -37,7 +39,7 @@ Week 7  │ Sprint 5 ██████████████████
 Establish the organizational foundation and full employee record management. After Sprint 1, HR can create employee records with all 40+ fields, encrypted PII is stored and accessible only to authorized roles, and the branch/department matrix is operational.
 
 ### Scope
-**Migrations:** 000019, 000020, 000026 (branches + departments seed only)
+**Migrations:** 000020, 000021, 000027 (branches + departments seed only)
 **Tables created/altered:** branches, departments, branch_departments, employees (extended), employee_dependents, insurance_rate_config, employee_salary_history, employment_contracts
 **API groups:** organization (10 endpoints), employees (8), my-profile (2), sensitive PII (1), dependents (4), salary-history (2), contracts (5) — See SPEC §13.1, §13.2, §13.3, §13.11, §13.15, §13.16
 **UI pages:** /admin/hrm/organization, /admin/hrm/employees, /admin/hrm/employees/new, /admin/hrm/employees/:id, /my-profile
@@ -50,14 +52,14 @@ Establish the organizational foundation and full employee record management. Aft
 
 ### Daily Task Breakdown
 
-#### Day 1: Migration 000019 — Organization Schema
-**Task 1.1:** Write `000019_hrm_organization.up.sql` — See SPEC §11.1, §11.2, §11.3
+#### Day 1: Migration 000020 — Organization Schema
+**Task 1.1:** Write `000020_hrm_organization.up.sql` — See SPEC §11.1, §11.2, §11.3
 - ALTER branches: add is_head_office, city, address, phone, established_date, head_of_branch_user_id, is_active
 - ALTER departments: add code (UNIQUE), dept_type (CHECK), description, is_active
 - CREATE TABLE branch_departments with uidx_branch_department
 - CREATE UNIQUE INDEX uidx_branches_head_office WHERE is_head_office = true
 
-**Task 1.2:** Write `000019_hrm_organization.down.sql` — See SPEC §12.2
+**Task 1.2:** Write `000020_hrm_organization.down.sql` — See SPEC §12.2
 - DROP TABLE branch_departments
 - ALTER departments DROP COLUMN code, dept_type, description, is_active
 - ALTER branches DROP COLUMN is_head_office, city, address, phone, established_date, head_of_branch_user_id, is_active
@@ -65,8 +67,8 @@ Establish the organizational foundation and full employee record management. Aft
 **Task 1.3:** Run `make migrate-lint` and `make migrate-up && make migrate-down && make migrate-up`
 **Task 1.4:** Implement Go repository + handler for `/hrm/organization/branches` (GET list, GET by id) — See SPEC §13.1
 
-#### Day 2: Migration 000020 Part 1 — Employee Extended Columns
-**Task 2.1:** Write first half of `000020_hrm_employees_extended.up.sql` — See SPEC §11.4
+#### Day 2: Migration 000021 Part 1 — Employee Extended Columns
+**Task 2.1:** Write first half of `000021_hrm_employees_extended.up.sql` — See SPEC §11.4
 - ADD all Basic columns: employee_code, grade (CHECK), position_title, manager_id, employment_type, status, hired_date, probation_end_date, termination_date, termination_reason, current_contract_id
 - ADD Personal/PII columns: gender, date_of_birth, place_of_birth, nationality, ethnicity, personal_email, personal_phone, work_phone, current_address, permanent_address, cccd_encrypted, cccd_issued_date, cccd_issued_place, passport_number, passport_expiry
 - ADD Employment columns: hired_source, referrer_employee_id, probation_salary_pct, work_location, remote_days_per_week
@@ -76,8 +78,8 @@ Establish the organizational foundation and full employee record management. Aft
 - Format: `NV{YY}-{SEQ4}` with year from hired_date, padded 4-digit sequence
 - BEFORE INSERT trigger with collision-retry loop
 
-#### Day 3: Migration 000020 Part 2 — Related Tables
-**Task 3.1:** Continue `000020_hrm_employees_extended.up.sql` — See SPEC §11.4
+#### Day 3: Migration 000021 Part 2 — Related Tables
+**Task 3.1:** Continue `000021_hrm_employees_extended.up.sql` — See SPEC §11.4
 - ADD Salary/Bank columns: base_salary, salary_currency, salary_effective_date, bank_account_encrypted, bank_name, bank_branch, mst_ca_nhan_encrypted
 - ADD Commission columns: commission_rate, commission_type, sales_target_yearly, biz_dev_region
 - ADD BHXH columns: so_bhxh_encrypted, bhxh_registered_date, bhxh_province_code, bhyt_card_number, bhyt_expiry_date, bhyt_registered_hospital_code, bhyt_registered_hospital_name, tncn_registered
@@ -90,21 +92,21 @@ Establish the organizational foundation and full employee record management. Aft
 
 **Task 3.5:** CREATE TABLE employment_contracts — See SPEC §11.9
 
-#### Day 4: Write Migration 000020 Down + 000026 Seed (Partial)
-**Task 4.1:** Write `000020_hrm_employees_extended.down.sql` — See SPEC §12.3
+#### Day 4: Write Migration 000021 Down + 000027 Seed (Partial)
+**Task 4.1:** Write `000021_hrm_employees_extended.down.sql` — See SPEC §12.3
 - DROP TRIGGER trg_employees_set_code
 - DROP FUNCTION fn_employees_set_code()
 - DROP TABLE employment_contracts, employee_salary_history, insurance_rate_config, employee_dependents
 - DROP COLUMN all 40+ columns explicitly (enumerate each)
-- Risk note: HIGH — never rollback 000020 on production with data
+- Risk note: HIGH — never rollback 000021 on production with data
 
-**Task 4.2:** Write partial `000026_hrm_seed_data.up.sql` — See SPEC §11.26
+**Task 4.2:** Write partial `000027_hrm_seed_data.up.sql` — See SPEC §11.26
 - INSERT branches: HO (is_head_office=true, Hà Nội), HCM (false, TP.HCM)
 - INSERT departments: AUDIT, TAX, HR, FIN, IT with correct dept_type
 - INSERT branch_departments matrix: HO → all 5, HCM → AUDIT + TAX only
 - INSERT insurance_rate_config: 2024 seed with KPCĐ 2%
 
-**Task 4.3:** Run full migration test: 000001 through 000020 + 000026 partial on clean DB
+**Task 4.3:** Run full migration test: 000001 through 000021 + 000027 partial on clean DB
 
 #### Day 5: Employee CRUD API (Backend)
 **Task 5.1:** Implement `EmployeeRepository` with sqlc queries — GET list with branch filter, GET by id, INSERT, UPDATE, soft delete
@@ -168,7 +170,7 @@ Establish the organizational foundation and full employee record management. Aft
 
 ### Exit Criteria (Sprint 1 Complete)
 
-- [ ] Migrations 000019, 000020, 000026 (partial) pass lint + round-trip test
+- [ ] Migrations 000020, 000021, 000027 (partial) pass lint + round-trip test
 - [ ] All 32 endpoints from scope respond correctly per role
 - [ ] POST /hrm/employees generates employee_code NV{YY}-{SEQ4} via trigger
 - [ ] PII fields (cccd_encrypted, mst_ca_nhan_encrypted, so_bhxh_encrypted, bank_account_encrypted) encrypted at rest, returned as `***` to unauthorized roles
@@ -192,7 +194,7 @@ Establish the organizational foundation and full employee record management. Aft
 
 ```bash
 # Rollback Sprint 1 (dev/staging only — never on production with data)
-make migrate-down VERSION=000018   # reverts 000026, 000020, 000019
+make migrate-down VERSION=000018   # reverts 000027, 000021, 000020
 git revert HEAD~N                  # revert all Sprint 1 commits
 ```
 
@@ -216,7 +218,7 @@ POST /hrm/employees/:id/salary-history → 201, immutability rule fires on UPDAT
 Full user provisioning workflow operational (HCM 2-step, HO direct, emergency). Certifications and CPE tracking functional. Offboarding checklists created. Notifications wired for provisioning and cert expiry.
 
 ### Scope
-**Migrations:** 000021, 000024
+**Migrations:** 000022, 000025
 **Tables:** certifications, training_courses, training_records, cpe_requirements_by_role, user_provisioning_requests, offboarding_checklists
 **API groups:** certifications (5), training/CPE (8), provisioning (9), offboarding (5) — See SPEC §13.4, §13.5, §13.12, §13.13
 **UI pages:** /admin/hrm/provisioning, /hrm/provisioning, /hrm/certifications, /hrm/training, /my-profile/certifications, /my-profile/training
@@ -224,33 +226,33 @@ Full user provisioning workflow operational (HCM 2-step, HO direct, emergency). 
 
 ### Dependencies
 - Sprint 1 complete and merged to main
-- Migrations 000019, 000020, 000026 (partial) applied
+- Migrations 000020, 000021, 000027 (partial) applied
 - Notification infrastructure (outbox pattern) available — See CLAUDE.md §Architecture Patterns
 
 ### Daily Task Breakdown
 
-#### Day 11: Migration 000021 — Professional Tables
-**Task 11.1:** Write `000021_hrm_professional.up.sql` — See SPEC §11.10–§11.13
+#### Day 11: Migration 000022 — Professional Tables
+**Task 11.1:** Write `000022_hrm_professional.up.sql` — See SPEC §11.10–§11.13
 - CREATE TABLE certifications with all indexes
 - CREATE TABLE training_courses (course_code UNIQUE)
 - CREATE TABLE training_records with status CHECK, indexes
 - CREATE TABLE cpe_requirements_by_role
 
-**Task 11.2:** Write `000021_hrm_professional.down.sql` — See SPEC §12.4
+**Task 11.2:** Write `000022_hrm_professional.down.sql` — See SPEC §12.4
 - DROP TABLE cpe_requirements_by_role, training_records, training_courses, certifications
 
-**Task 11.3:** Add CPE requirements seed to 000026 — See SPEC §11.26, §6.4
+**Task 11.3:** Add CPE requirements seed to 000027 — See SPEC §11.26, §6.4
 - PARTNER/SENIOR_AUDITOR/JUNIOR_AUDITOR: 40h/year VN_CPA via VACPA
 - PARTNER: 40h ACCA, 40h CIA, 20h CFA
 
-#### Day 12: Migration 000024 — Provisioning Tables
-**Task 12.1:** Write `000024_hrm_provisioning.up.sql` — See SPEC §11.22, §11.23
+#### Day 12: Migration 000025 — Provisioning Tables
+**Task 12.1:** Write `000025_hrm_provisioning.up.sql` — See SPEC §11.22, §11.23
 - CREATE TABLE user_provisioning_requests with all columns and expires_at
 - CREATE UNIQUE INDEX uidx_provisioning_pending WHERE status = 'PENDING'
 - CREATE TABLE offboarding_checklists with JSONB items
 
-**Task 12.2:** Write `000024_hrm_provisioning.down.sql` — See SPEC §12.7
-**Task 12.3:** Run lint + round-trip test on migrations 000021 and 000024
+**Task 12.2:** Write `000025_hrm_provisioning.down.sql` — See SPEC §12.7
+**Task 12.3:** Run lint + round-trip test on migrations 000022 and 000025
 
 #### Day 13: Certifications API
 **Task 13.1:** Implement certifications repository + use case + handler — See SPEC §13.4
@@ -328,7 +330,7 @@ Full user provisioning workflow operational (HCM 2-step, HO direct, emergency). 
 
 ### Exit Criteria (Sprint 2 Complete)
 
-- [ ] Migrations 000021, 000024 pass lint + round-trip
+- [ ] Migrations 000022, 000025 pass lint + round-trip
 - [ ] Provisioning HCM 2-step flow works end-to-end (HoB approve → HR approve → SA execute)
 - [ ] Account creation is atomic (user + role + employee link in single transaction)
 - [ ] SUPER_ADMIN / CHAIRMAN roles blocked from provisioning flow
@@ -353,7 +355,7 @@ Full user provisioning workflow operational (HCM 2-step, HO direct, emergency). 
 Performance review workflow (manager → employee acknowledge). Independence declarations for annual and per-engagement. Compliance tracking for VSA 220/ISA 220 requirements.
 
 ### Scope
-**Migrations:** 000022
+**Migrations:** 000023
 **Tables:** performance_reviews, engagement_peer_reviews, independence_declarations
 **API groups:** performance (8), independence (6) — See SPEC §13.6, §13.7
 **UI pages:** /hrm/performance, /hrm/independence, /my-performance, /my-independence, /my-team/performance, /my-team/independence
@@ -366,13 +368,13 @@ Performance review workflow (manager → employee acknowledge). Independence dec
 
 ### Daily Task Breakdown
 
-#### Day 21: Migration 000022
-**Task 21.1:** Write `000022_hrm_performance.up.sql` — See SPEC §11.14–§11.16
+#### Day 21: Migration 000023
+**Task 21.1:** Write `000023_hrm_performance.up.sql` — See SPEC §11.14–§11.16
 - CREATE TABLE performance_reviews with uidx_review_employee_period UNIQUE
 - CREATE TABLE engagement_peer_reviews with chk_peer_review_self CHECK
 - CREATE TABLE independence_declarations with uidx_independence_annual, chk_annual_year, chk_engagement_ref
 
-**Task 21.2:** Write `000022_hrm_performance.down.sql` — See SPEC §12.5
+**Task 21.2:** Write `000023_hrm_performance.down.sql` — See SPEC §12.5
 
 #### Day 22: Independence API
 **Task 22.1:** Independence declarations — See SPEC §13.7
@@ -414,7 +416,7 @@ Performance review workflow (manager → employee acknowledge). Independence dec
 
 ### Exit Criteria (Sprint 3 Complete)
 
-- [ ] Migration 000022 passes lint + round-trip
+- [ ] Migration 000023 passes lint + round-trip
 - [ ] ANNUAL unique constraint: one declaration per employee per year
 - [ ] Conflict flow: has_conflict=true → Partner notification → acknowledgment required
 - [ ] Per-engagement declaration has engagement_id FK (enforced by chk_engagement_ref)
@@ -430,7 +432,7 @@ Performance review workflow (manager → employee acknowledge). Independence dec
 Leave management with balance tracking. OT tracking with 300h/year hard cap. Holiday calendar seeded 2026–2030. All time-related approvals with notifications.
 
 ### Scope
-**Migrations:** 000023, 000026 (remaining: holidays + CPE reqs)
+**Migrations:** 000024, 000027 (remaining: holidays + CPE reqs)
 **Tables:** holidays, leave_balances, leave_requests, ot_requests, VIEW employee_ot_summary_year; ALTER timesheets
 **API groups:** holidays (4), leave (10), OT (7) — See SPEC §13.8, §13.9, §13.10
 **UI pages:** /hrm/leave/requests, /hrm/leave/calendar, /hrm/overtime/requests, /my-leave, /my-overtime, /admin/hrm/holidays
@@ -443,8 +445,8 @@ Leave management with balance tracking. OT tracking with 300h/year hard cap. Hol
 
 ### Daily Task Breakdown
 
-#### Day 26: Migration 000023
-**Task 26.1:** Write `000023_hrm_time_leave.up.sql` — See SPEC §11.17–§11.21
+#### Day 26: Migration 000024
+**Task 26.1:** Write `000024_hrm_time_leave.up.sql` — See SPEC §11.17–§11.21
 - CREATE TABLE holidays with generated year column
 - CREATE TABLE leave_balances with uidx_leave_balance UNIQUE, chk_days_non_negative
 - CREATE TABLE leave_requests with all status CHECKs
@@ -452,8 +454,8 @@ Leave management with balance tracking. OT tracking with 300h/year hard cap. Hol
 - CREATE TABLE ot_requests with chk_ot_times, chk_ot_hours
 - CREATE VIEW employee_ot_summary_year (300h cap calculation)
 
-**Task 26.2:** Write `000023_hrm_time_leave.down.sql` — See SPEC §12.6
-**Task 26.3:** Complete `000026_hrm_seed_data.up.sql` — See SPEC §11.26
+**Task 26.2:** Write `000024_hrm_time_leave.down.sql` — See SPEC §12.6
+**Task 26.3:** Complete `000027_hrm_seed_data.up.sql` — See SPEC §11.26
 - INSERT holidays 2026 (12 national holidays) + 2027–2030 estimated dates
 
 #### Day 27: Leave API
@@ -504,7 +506,7 @@ Leave management with balance tracking. OT tracking with 300h/year hard cap. Hol
 
 ### Exit Criteria (Sprint 4 Complete)
 
-- [ ] Migration 000023 + 000026 (complete) pass lint + round-trip
+- [ ] Migration 000024 + 000027 (complete) pass lint + round-trip
 - [ ] OT cap 300h/year enforced at API level (not just DB)
 - [ ] Leave balance updates are atomic (approve and reject)
 - [ ] Holidays 2026–2030 seeded and calendar renders correctly
@@ -520,7 +522,7 @@ Leave management with balance tracking. OT tracking with 300h/year hard cap. Hol
 Expense claim workflow end-to-end. All 10 HRM standard reports with Excel/CSV export. Security review, performance validation, E2E tests.
 
 ### Scope
-**Migrations:** 000025
+**Migrations:** 000026
 **Tables:** expense_claims (+ trigger), expense_claim_items
 **API groups:** expenses (13), reports (10), insurance config (3) — See SPEC §13.14, §13.16, §19.1
 **UI pages:** /my-expenses, /hrm/expenses, /admin/hrm/reports, /admin/hrm/insurance-config
@@ -533,12 +535,12 @@ Expense claim workflow end-to-end. All 10 HRM standard reports with Excel/CSV ex
 
 ### Daily Task Breakdown
 
-#### Day 31: Migration 000025
-**Task 31.1:** Write `000025_hrm_expenses.up.sql` — See SPEC §11.24, §11.25
+#### Day 31: Migration 000026
+**Task 31.1:** Write `000026_hrm_expenses.up.sql` — See SPEC §11.24, §11.25
 - CREATE TABLE expense_claims with fn_expense_claims_set_number trigger (PC{YY}-{SEQ4})
 - CREATE TABLE expense_claim_items
 
-**Task 31.2:** Write `000025_hrm_expenses.down.sql` — See SPEC §12.8
+**Task 31.2:** Write `000026_hrm_expenses.down.sql` — See SPEC §12.8
 
 #### Day 32: Expenses API
 **Task 32.1:** Self-service expense endpoints — See SPEC §13.14
@@ -602,7 +604,7 @@ Expense claim workflow end-to-end. All 10 HRM standard reports with Excel/CSV ex
 
 ### Exit Criteria (Sprint 5 Complete)
 
-- [ ] Migration 000025 passes lint + round-trip
+- [ ] Migration 000026 passes lint + round-trip
 - [ ] All 10 reports return correct data with filters
 - [ ] Salary report writes SALARY_REPORT_GENERATED audit log every time
 - [ ] Excel + CSV export works for all 10 reports
