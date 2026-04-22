@@ -41,20 +41,9 @@ export const INTERNAL_ROLES: Role[] = [
   ROLES.HEAD_OF_BRANCH,
 ];
 
-// Landing page after login, ordered by priority (first match wins)
-const LANDING_RULES: { roles: Role[]; path: string }[] = [
-  { roles: ROLE_GROUPS.sysAdmin,  path: '/admin/dashboard' },
-  { roles: ROLE_GROUPS.executive, path: '/executive/dashboard' },
-  { roles: ROLE_GROUPS.hr,        path: '/hrm/dashboard' },
-  { roles: ROLE_GROUPS.client,    path: '/client/portal' },
-  { roles: [...ROLE_GROUPS.partner, ...ROLE_GROUPS.audit], path: '/dashboard' },
-];
-
 export function getRoleLandingPage(userRoles: string[]): string {
-  for (const rule of LANDING_RULES) {
-    if (rule.roles.some(r => userRoles.includes(r))) return rule.path;
-  }
-  return '/dashboard';
+  if (ROLE_GROUPS.client.some(r => userRoles.includes(r))) return '/client/portal';
+  return '/';
 }
 
 // Module-level access helpers

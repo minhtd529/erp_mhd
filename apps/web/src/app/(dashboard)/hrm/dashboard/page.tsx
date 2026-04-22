@@ -1,26 +1,33 @@
 'use client';
 import { useAuthStore } from '@/stores/auth';
-import { Users, Landmark, Share2, UserCircle } from 'lucide-react';
+import { Users, Landmark, Share2, UserCircle, BookOpen, Award, UserPlus, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
-import { ROLES } from '@/lib/roles';
+import { ROLES, ROLE_GROUPS, hasAnyRole } from '@/lib/roles';
 
 export default function HrmDashboardPage() {
   const { user } = useAuthStore();
   const userRoles: string[] = user?.roles ?? [];
 
+  const isAdmin    = hasAnyRole(userRoles, ROLE_GROUPS.sysAdmin);
   const isHrManager = userRoles.includes(ROLES.HR_MANAGER);
-  const isHoB = userRoles.includes(ROLES.HEAD_OF_BRANCH);
+  const isHoB      = userRoles.includes(ROLES.HEAD_OF_BRANCH);
+  const canSeeOrg  = isAdmin || isHrManager;
+  const canSeeEmp  = isAdmin || isHrManager || userRoles.includes(ROLES.HR_STAFF) || isHoB;
 
   const links = [
-    ...(isHrManager || userRoles.includes(ROLES.HR_STAFF) ? [{
-      label: 'Nhân viên', href: '/admin/hrm/employees', icon: Users, desc: 'Danh sách và hồ sơ nhân viên',
+    ...(canSeeEmp ? [{
+      label: isHoB && !canSeeOrg ? 'Nhân viên chi nhánh' : 'Nhân viên',
+      href: '/admin/hrm/employees', icon: Users, desc: 'Danh sách và hồ sơ nhân viên',
     }] : []),
-    ...(isHoB ? [{
-      label: 'Nhân viên chi nhánh', href: '/admin/hrm/employees', icon: Users, desc: 'Nhân viên trong chi nhánh của bạn',
-    }] : []),
-    ...(isHrManager ? [
-      { label: 'Cơ cấu tổ chức', href: '/admin/hrm/organization/org-chart', icon: Share2, desc: 'Sơ đồ tổ chức công ty' },
-      { label: 'Chi nhánh', href: '/admin/hrm/organization/branches', icon: Landmark, desc: 'Quản lý chi nhánh' },
+    ...(canSeeOrg ? [
+      { label: 'Cơ cấu tổ chức', href: '/admin/hrm/organization/org-chart', icon: Share2,  desc: 'Sơ đồ tổ chức công ty' },
+      { label: 'Chi nhánh',      href: '/admin/hrm/organization/branches',  icon: Landmark, desc: 'Quản lý chi nhánh'     },
+    ] : []),
+    ...(canSeeOrg ? [
+      { label: 'Danh mục khóa học', href: '/admin/hrm/training-courses', icon: BookOpen,     desc: 'Khóa học đào tạo nội bộ' },
+      { label: 'Yêu cầu CPE',      href: '/admin/hrm/cpe-requirements',  icon: Award,        desc: 'Chứng chỉ CPE bắt buộc'  },
+      { label: 'Cấp quyền',        href: '/admin/hrm/provisioning',      icon: UserPlus,     desc: 'Cấp tài khoản nhân viên' },
+      { label: 'Offboarding',      href: '/admin/hrm/offboarding',       icon: ClipboardList, desc: 'Quy trình nghỉ việc'    },
     ] : []),
     { label: 'Hồ sơ của tôi', href: '/my-profile', icon: UserCircle, desc: 'Xem và cập nhật thông tin cá nhân' },
   ];

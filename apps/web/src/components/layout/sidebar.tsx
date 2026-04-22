@@ -1,16 +1,16 @@
 'use client';
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
-import { ROLE_GROUPS, MODULE_ROLES, hasAnyRole } from '@/lib/roles';
+import { MODULE_ROLES, ROLE_GROUPS, hasAnyRole } from '@/lib/roles';
+import { getModuleContext, MODULE_LABELS, type ModuleContext } from '@/lib/navigation';
 import {
   LayoutDashboard, Users, Building2, Briefcase, Clock, FileText,
   DollarSign, FolderOpen, TrendingUp, BarChart3, Settings, LogOut,
-  ShieldCheck, UserCog, GitBranch, ScrollText, Network, Landmark,
-  Layers, Grid3x3, Share2, UserCircle, ChevronDown, ChevronRight,
-  UserPlus, ClipboardList, BookOpen, Award,
+  ShieldCheck, UserCog, GitBranch, ScrollText, Landmark,
+  Layers, Grid3x3, Share2, UserCircle,
+  UserPlus, ClipboardList, BookOpen, Award, Home,
 } from 'lucide-react';
 
 interface NavItem {
@@ -20,230 +20,120 @@ interface NavItem {
   roles?: string[];
 }
 
-interface NavGroup {
-  title: string;
-  roles?: string[];         // Group only shows if user has any of these roles
-  defaultOpen?: boolean;
+interface ModuleNav {
   items: NavItem[];
 }
 
-const NAV_GROUPS: NavGroup[] = [
-  // ── Quản trị hệ thống (SUPER_ADMIN only) ────────────────────────────
-  {
-    title: 'Quản trị hệ thống',
-    roles: ROLE_GROUPS.sysAdmin,
-    defaultOpen: true,
+const MODULE_NAVS: Record<Exclude<ModuleContext, null>, ModuleNav> = {
+  hrm: {
     items: [
-      { label: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-      { label: 'Người dùng & Vai trò', href: '/users', icon: UserCog },
-      { label: 'Chi nhánh & Phòng ban', href: '/branches', icon: GitBranch },
-      { label: 'Nhật ký hệ thống', href: '/audit-logs', icon: ScrollText },
-      { label: 'Cài đặt', href: '/settings', icon: Settings },
+      { label: 'Dashboard',          href: '/hrm/dashboard',                      icon: LayoutDashboard },
+      { label: 'Nhân viên',          href: '/admin/hrm/employees',                icon: Users,        roles: MODULE_ROLES.hrmEmployees },
+      { label: 'Chi nhánh',          href: '/admin/hrm/organization/branches',    icon: Landmark,     roles: MODULE_ROLES.hrmOrgWrite },
+      { label: 'Phòng ban',          href: '/admin/hrm/organization/departments', icon: Layers,       roles: MODULE_ROLES.hrmOrgWrite },
+      { label: 'Ma trận',            href: '/admin/hrm/organization/matrix',      icon: Grid3x3,      roles: MODULE_ROLES.hrmOrgWrite },
+      { label: 'Sơ đồ tổ chức',     href: '/admin/hrm/organization/org-chart',   icon: Share2,       roles: MODULE_ROLES.hrmOrg },
+      { label: 'Danh mục khóa học',  href: '/admin/hrm/training-courses',         icon: BookOpen,     roles: MODULE_ROLES.hrmTrainingCourseRead },
+      { label: 'Yêu cầu CPE',       href: '/admin/hrm/cpe-requirements',         icon: Award,        roles: MODULE_ROLES.hrmCPERead },
+      { label: 'Cấp quyền',         href: '/admin/hrm/provisioning',             icon: UserPlus,     roles: MODULE_ROLES.hrmProvisioningRead },
+      { label: 'Offboarding',        href: '/admin/hrm/offboarding',              icon: ClipboardList, roles: MODULE_ROLES.hrmOffboardingRead },
+      { label: 'Hồ sơ của tôi',     href: '/my-profile',                         icon: UserCircle,   roles: ROLE_GROUPS.hr },
     ],
   },
-
-  // ── Tổng quan (partner + audit + executive) ──────────────────────────
-  {
-    title: 'Tổng quan',
-    roles: [...ROLE_GROUPS.partner, ...ROLE_GROUPS.audit],
-    defaultOpen: true,
+  audit: {
     items: [
-      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { label: 'Tổng quan',         href: '/dashboard',       icon: LayoutDashboard, roles: [...ROLE_GROUPS.partner, ...ROLE_GROUPS.audit] },
+      { label: 'Hợp đồng',          href: '/engagements',     icon: Briefcase,       roles: MODULE_ROLES.engagements },
+      { label: 'Hồ sơ kiểm toán',   href: '/working-papers',  icon: FolderOpen,      roles: MODULE_ROLES.workingPapers },
+      { label: 'Chấm công',         href: '/timesheets',      icon: Clock,           roles: MODULE_ROLES.timesheets },
+      { label: 'Hoa hồng',          href: '/commissions',     icon: TrendingUp,      roles: MODULE_ROLES.commissions },
+      { label: 'Hoa hồng của tôi',  href: '/commissions/my',  icon: TrendingUp,      roles: [...ROLE_GROUPS.audit] },
+      { label: 'Hồ sơ của tôi',    href: '/my-profile',      icon: UserCircle },
     ],
   },
-
-  // ── Tổng quan điều hành (CHAIRMAN, CEO) ─────────────────────────────
-  {
-    title: 'Tổng quan',
-    roles: ROLE_GROUPS.executive,
-    defaultOpen: true,
+  finance: {
     items: [
-      { label: 'Dashboard điều hành', href: '/executive/dashboard', icon: LayoutDashboard },
+      { label: 'Hóa đơn',    href: '/billing/invoices',  icon: FileText   },
+      { label: 'Thanh toán', href: '/billing/payments',  icon: DollarSign },
     ],
   },
-
-  // ── Tổng quan nhân sự (HR roles) ─────────────────────────────────────
-  {
-    title: 'Tổng quan',
-    roles: ROLE_GROUPS.hr,
-    defaultOpen: true,
-    items: [
-      { label: 'HRM Dashboard', href: '/hrm/dashboard', icon: LayoutDashboard },
-    ],
-  },
-
-  // ── CRM ──────────────────────────────────────────────────────────────
-  {
-    title: 'CRM',
-    roles: [...ROLE_GROUPS.sysAdmin, ...ROLE_GROUPS.executive, ...ROLE_GROUPS.partner, ...ROLE_GROUPS.audit],
-    defaultOpen: true,
+  crm: {
     items: [
       { label: 'Khách hàng', href: '/clients', icon: Building2 },
     ],
   },
-
-  // ── Hợp đồng kiểm toán ──────────────────────────────────────────────
-  {
-    title: 'Hợp đồng kiểm toán',
-    roles: MODULE_ROLES.engagements,
-    defaultOpen: true,
-    items: [
-      { label: 'Hợp đồng', href: '/engagements', icon: Briefcase },
-      { label: 'Hồ sơ kiểm toán', href: '/working-papers', icon: FolderOpen, roles: MODULE_ROLES.workingPapers },
-    ],
-  },
-
-  // ── Timesheet & Hoa hồng (audit staff + partner) ────────────────────
-  {
-    title: 'Công việc cá nhân',
-    roles: [...ROLE_GROUPS.partner, ...ROLE_GROUPS.audit],
-    defaultOpen: true,
-    items: [
-      { label: 'Chấm công', href: '/timesheets', icon: Clock },
-      { label: 'Hoa hồng', href: '/commissions', icon: TrendingUp, roles: MODULE_ROLES.commissions },
-      { label: 'Hoa hồng của tôi', href: '/commissions/my', icon: TrendingUp, roles: [...ROLE_GROUPS.audit] },
-      { label: 'Hồ sơ của tôi', href: '/my-profile', icon: UserCircle },
-    ],
-  },
-
-  // ── Tài chính ────────────────────────────────────────────────────────
-  {
-    title: 'Tài chính',
-    roles: MODULE_ROLES.billing,
-    defaultOpen: false,
-    items: [
-      { label: 'Hóa đơn', href: '/billing/invoices', icon: FileText },
-      { label: 'Thanh toán', href: '/billing/payments', icon: DollarSign },
-    ],
-  },
-
-  // ── Nhân sự (HRM) — org section ─────────────────────────────────────
-  {
-    title: 'Tổ chức',
-    roles: MODULE_ROLES.hrmOrgWrite,
-    defaultOpen: false,
-    items: [
-      { label: 'Chi nhánh', href: '/admin/hrm/organization/branches', icon: Landmark },
-      { label: 'Phòng ban', href: '/admin/hrm/organization/departments', icon: Layers },
-      { label: 'Ma trận', href: '/admin/hrm/organization/matrix', icon: Grid3x3 },
-      { label: 'Sơ đồ tổ chức', href: '/admin/hrm/organization/org-chart', icon: Share2 },
-    ],
-  },
-
-  // ── Nhân sự (HRM) — employee section ────────────────────────────────
-  {
-    title: 'Nhân viên',
-    roles: MODULE_ROLES.hrmEmployees,
-    defaultOpen: true,
-    items: [
-      { label: 'Danh sách nhân viên', href: '/admin/hrm/employees', icon: Users },
-    ],
-  },
-
-  // ── Nhân sự (HRM) — provisioning & offboarding ───────────────────────
-  {
-    title: 'Cấp quyền & Offboarding',
-    roles: MODULE_ROLES.hrmProvisioningRead,
-    defaultOpen: true,
-    items: [
-      {
-        label: 'Cấp tài khoản',
-        href: '/admin/hrm/provisioning',
-        icon: UserPlus,
-        roles: MODULE_ROLES.hrmProvisioningRead,
-      },
-      {
-        label: 'Offboarding',
-        href: '/admin/hrm/offboarding',
-        icon: ClipboardList,
-        roles: MODULE_ROLES.hrmOffboardingRead,
-      },
-    ],
-  },
-
-  // ── Nhân sự (HRM) — đào tạo & CPE ───────────────────────────────────
-  {
-    title: 'Đào tạo & CPE',
-    roles: MODULE_ROLES.hrmTrainingCourseRead,
-    defaultOpen: false,
-    items: [
-      {
-        label: 'Danh mục khóa học',
-        href: '/admin/hrm/training-courses',
-        icon: BookOpen,
-        roles: MODULE_ROLES.hrmTrainingCourseRead,
-      },
-      {
-        label: 'Yêu cầu CPE',
-        href: '/admin/hrm/cpe-requirements',
-        icon: Award,
-        roles: MODULE_ROLES.hrmCPERead,
-      },
-    ],
-  },
-
-  // ── Hồ sơ cá nhân — HR roles ─────────────────────────────────────────
-  {
-    title: 'Cá nhân',
-    roles: ROLE_GROUPS.hr,
-    defaultOpen: true,
-    items: [
-      { label: 'Hồ sơ của tôi', href: '/my-profile', icon: UserCircle },
-    ],
-  },
-
-  // ── Báo cáo ──────────────────────────────────────────────────────────
-  {
-    title: 'Báo cáo',
-    roles: MODULE_ROLES.reports,
-    defaultOpen: false,
+  reports: {
     items: [
       { label: 'Báo cáo', href: '/reports', icon: BarChart3 },
     ],
   },
-
-  // ── Client portal ────────────────────────────────────────────────────
-  {
-    title: 'Dịch vụ',
-    roles: ROLE_GROUPS.client,
-    defaultOpen: true,
+  system: {
     items: [
-      { label: 'Cổng thông tin', href: '/client/portal', icon: LayoutDashboard },
-      { label: 'Hợp đồng dịch vụ', href: '/engagements', icon: Briefcase },
-      { label: 'Hóa đơn', href: '/billing/invoices', icon: FileText },
-      { label: 'Hồ sơ kiểm toán', href: '/working-papers', icon: FolderOpen },
+      { label: 'Dashboard',           href: '/admin/dashboard', icon: LayoutDashboard },
+      { label: 'Người dùng & Vai trò', href: '/users',          icon: UserCog   },
+      { label: 'Chi nhánh & Phòng ban', href: '/branches',      icon: GitBranch },
+      { label: 'Nhật ký hệ thống',    href: '/audit-logs',      icon: ScrollText },
+      { label: 'Cài đặt',             href: '/settings',        icon: Settings  },
     ],
   },
-];
+  client: {
+    items: [
+      { label: 'Cổng thông tin',    href: '/client/portal',    icon: LayoutDashboard },
+      { label: 'Hợp đồng dịch vụ', href: '/engagements',      icon: Briefcase       },
+      { label: 'Hóa đơn',          href: '/billing/invoices',  icon: FileText        },
+      { label: 'Hồ sơ kiểm toán',  href: '/working-papers',   icon: FolderOpen      },
+    ],
+  },
+};
 
-function NavGroupSection({ group, userRoles, pathname }: {
-  group: NavGroup;
-  userRoles: string[];
-  pathname: string;
-}) {
-  const [open, setOpen] = useState(group.defaultOpen ?? true);
+export function Sidebar() {
+  const pathname = usePathname();
+  const { user, logout } = useAuthStore();
+  const userRoles: string[] = user?.roles ?? [];
 
-  const visibleItems = group.items.filter(item =>
-    !item.roles || hasAnyRole(userRoles, item.roles)
+  const context = getModuleContext(pathname, userRoles);
+
+  if (context === null) return null;
+
+  const moduleNav = MODULE_NAVS[context];
+  const visibleItems = moduleNav.items.filter(
+    item => !item.roles || hasAnyRole(userRoles, item.roles)
   );
 
-  if (visibleItems.length === 0) return null;
-
   return (
-    <div className="mb-1">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white/40 hover:text-white/60 transition-colors"
-      >
-        <span>{group.title}</span>
-        {open
-          ? <ChevronDown className="w-3 h-3" />
-          : <ChevronRight className="w-3 h-3" />
-        }
-      </button>
+    <aside className="flex flex-col w-60 min-h-screen bg-primary text-white flex-shrink-0">
+      {/* Logo */}
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
+        <div className="w-8 h-8 rounded bg-secondary/30 flex items-center justify-center flex-shrink-0">
+          <ShieldCheck className="w-5 h-5 text-secondary" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold leading-none truncate">ERP Audit</p>
+          <p className="text-xs text-white/50 mt-0.5 truncate">v1.0</p>
+        </div>
+      </div>
 
-      {open && (
-        <ul className="flex flex-col gap-0.5">
+      <nav className="flex-1 px-3 py-4 overflow-y-auto flex flex-col gap-1">
+        {/* Home button */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 px-3 py-2 rounded text-sm text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+        >
+          <Home className="w-4 h-4 flex-shrink-0" />
+          Trang chủ
+        </Link>
+
+        {/* Divider + module label */}
+        <div className="flex items-center gap-2 px-3 py-1 mt-1">
+          <div className="h-px flex-1 bg-white/15" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
+            {MODULE_LABELS[context]}
+          </span>
+          <div className="h-px flex-1 bg-white/15" />
+        </div>
+
+        {/* Module nav items */}
+        <ul className="flex flex-col gap-0.5 mt-1">
           {visibleItems.map(item => {
             const active = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
@@ -264,59 +154,9 @@ function NavGroupSection({ group, userRoles, pathname }: {
             );
           })}
         </ul>
-      )}
-    </div>
-  );
-}
-
-export function Sidebar() {
-  const pathname = usePathname();
-  const { user, logout } = useAuthStore();
-  const userRoles: string[] = user?.roles ?? [];
-
-  const visibleGroups = NAV_GROUPS.filter(group =>
-    !group.roles || hasAnyRole(userRoles, group.roles)
-  );
-
-  // Deduplicate groups that have the same title (e.g. multiple "Tổng quan" definitions)
-  // — only the first matching one per title renders
-  const seenTitles = new Set<string>();
-  const deduped = visibleGroups.filter(group => {
-    // Groups without roles collision risk don't need dedup
-    if (!group.roles) return true;
-    const key = group.title + '|' + group.items.map(i => i.href).join(',');
-    if (seenTitles.has(group.title)) {
-      // Allow if different items
-      if (seenTitles.has(key)) return false;
-    }
-    seenTitles.add(group.title);
-    seenTitles.add(key);
-    return true;
-  });
-
-  return (
-    <aside className="flex flex-col w-60 min-h-screen bg-primary text-white">
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
-        <div className="w-8 h-8 rounded bg-secondary/30 flex items-center justify-center flex-shrink-0">
-          <ShieldCheck className="w-5 h-5 text-secondary" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-bold leading-none truncate">ERP Audit</p>
-          <p className="text-xs text-white/50 mt-0.5 truncate">v1.0</p>
-        </div>
-      </div>
-
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        {deduped.map((group, idx) => (
-          <NavGroupSection
-            key={`${group.title}-${idx}`}
-            group={group}
-            userRoles={userRoles}
-            pathname={pathname}
-          />
-        ))}
       </nav>
 
+      {/* User footer */}
       <div className="px-3 py-3 border-t border-white/10">
         <div className="flex items-center gap-3 px-3 py-2 mb-1">
           <div className="w-7 h-7 rounded-full bg-secondary/30 flex items-center justify-center flex-shrink-0">
