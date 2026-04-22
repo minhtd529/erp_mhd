@@ -6,7 +6,8 @@ import (
 )
 
 // RegisterRoutes wires all HRM routes under /api/v1.
-// SPEC §13.1 — organization, employees, sensitive PII, salary history, profile.
+// SPEC §13.1–§13.13 — organization, employees, sensitive PII, salary history, profile,
+// user provisioning (§13.12), offboarding (§13.13).
 func RegisterRoutes(
 	v1 *gin.RouterGroup,
 	org *OrgHandler,
@@ -16,6 +17,7 @@ func RegisterRoutes(
 	prof *ProfileHandler,
 	sens *SensitiveHandler,
 	sal *SalaryHistoryHandler,
+	prov *ProvisioningHandler,
 	authMW gin.HandlerFunc,
 ) {
 	// ── Organization ──────────────────────────────────────────────────────────
@@ -95,5 +97,31 @@ func RegisterRoutes(
 	{
 		me.GET("/hrm-profile", prof.GetMyProfile)
 		me.PUT("/hrm-profile", prof.UpdateMyProfile)
+	}
+
+	// ── User Provisioning Requests — SPEC §13.12 ──────────────────────────────
+	p := v1.Group("/hrm/user-provisioning-requests", authMW)
+	{
+		p.GET("", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER", "HEAD_OF_BRANCH"), prov.ListProvisioningRequests)
+		p.POST("", mw.RequireRole("HR_MANAGER", "HEAD_OF_BRANCH", "CEO"), prov.CreateProvisioningRequest)
+		p.GET("/:id", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER", "HEAD_OF_BRANCH"), prov.GetProvisioningRequest)
+		p.POST("/:id/branch-approve", mw.RequireRole("HEAD_OF_BRANCH"), prov.BranchApprove)
+		p.POST("/:id/branch-reject", mw.RequireRole("HEAD_OF_BRANCH"), prov.BranchReject)
+		p.POST("/:id/hr-approve", mw.RequireRole("HR_MANAGER"), prov.HRApprove)
+		p.POST("/:id/hr-reject", mw.RequireRole("HR_MANAGER"), prov.HRReject)
+		p.POST("/:id/execute", mw.RequireRole("SUPER_ADMIN"), prov.ExecuteProvisioning)
+		// Cancel: requester or SA — role check is permissive; ownership enforced in usecase
+		p.POST("/:id/cancel", prov.CancelProvisioningRequest)
+	}
+
+	// ── Offboarding Checklists — SPEC §13.13 ─────────────────────────────────
+	ob := v1.Group("/hrm/offboarding", authMW)
+	{
+		ob.GET("", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER", "CEO"), prov.ListOffboarding)
+		ob.POST("", mw.RequireRole("HR_MANAGER"), prov.CreateOffboarding)
+		ob.GET("/:id", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER", "CEO"), prov.GetOffboarding)
+		// items/:key — HR, IT (no dedicated IT role in RBAC so HR_STAFF), Finance roles
+		ob.PUT("/:id/items/:key", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER", "HR_STAFF", "ACCOUNTANT"), prov.UpdateOffboardingItem)
+		ob.POST("/:id/complete", mw.RequireRole("HR_MANAGER"), prov.CompleteOffboarding)
 	}
 }

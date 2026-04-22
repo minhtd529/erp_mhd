@@ -209,6 +209,11 @@ func main() {
 	hrmSensH := hrmhandler.NewSensitiveHandler(hrmSensUC)
 	hrmSalH := hrmhandler.NewSalaryHistoryHandler(hrmSalUC)
 
+	hrmProvRepo := hrmrepo.NewProvisioningRepo(db.Pool)
+	hrmOffRepo := hrmrepo.NewOffboardingRepo(db.Pool)
+	hrmProvUC := hrmusecase.NewProvisioningUseCase(hrmProvRepo, hrmOffRepo, db.Pool, auditLogger)
+	hrmProvH := hrmhandler.NewProvisioningHandler(hrmProvUC)
+
 	// ── Org module (branches & departments) ───────────────────────────────────
 	branchRepo := orgrepo.NewBranchRepo(db.Pool)
 	deptRepo := orgrepo.NewDeptRepo(db.Pool)
@@ -372,7 +377,7 @@ func main() {
 	v1.Use(require2FA)
 	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, pushH, auditH, authMW)
 	crmhandler.RegisterRoutes(v1, clientH, contactH, authMW)
-	hrmhandler.RegisterRoutes(v1, hrmOrgH, hrmEmpH, hrmDepH, hrmConH, hrmProfH, hrmSensH, hrmSalH, authMW)
+	hrmhandler.RegisterRoutes(v1, hrmOrgH, hrmEmpH, hrmDepH, hrmConH, hrmProfH, hrmSensH, hrmSalH, hrmProvH, authMW)
 	orghandler.RegisterRoutes(v1, branchH, deptH, authMW)
 	enghandler.RegisterRoutes(v1, engH, teamH, taskH, costH, authMW)
 	tshandler.RegisterRoutes(v1, tsH, entryH, attendanceH, authMW)
