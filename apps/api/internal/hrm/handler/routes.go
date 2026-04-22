@@ -7,7 +7,7 @@ import (
 
 // RegisterRoutes wires all HRM routes under /api/v1.
 // SPEC §13.1–§13.13 — organization, employees, sensitive PII, salary history, profile,
-// user provisioning (§13.12), offboarding (§13.13).
+// user provisioning (§13.12), offboarding (§13.13), professional dev (§13.10, §13.11).
 func RegisterRoutes(
 	v1 *gin.RouterGroup,
 	org *OrgHandler,
@@ -18,6 +18,7 @@ func RegisterRoutes(
 	sens *SensitiveHandler,
 	sal *SalaryHistoryHandler,
 	prov *ProvisioningHandler,
+	professional *ProfessionalHandler,
 	authMW gin.HandlerFunc,
 ) {
 	// ── Organization ──────────────────────────────────────────────────────────
@@ -123,5 +124,63 @@ func RegisterRoutes(
 		// items/:key — HR, IT (no dedicated IT role in RBAC so HR_STAFF), Finance roles
 		ob.PUT("/:id/items/:key", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER", "HR_STAFF", "ACCOUNTANT"), prov.UpdateOffboardingItem)
 		ob.POST("/:id/complete", mw.RequireRole("HR_MANAGER"), prov.CompleteOffboarding)
+	}
+
+	// ── Certifications — SPEC §13.10 ─────────────────────────────────────────
+	// Expiring alert: must be registered BEFORE /:id to avoid route shadowing.
+	cert := v1.Group("/hrm/certifications", authMW)
+	{
+		cert.GET("/expiring",
+			mw.RequireRole("SUPER_ADMIN", "HR_MANAGER", "CEO", "CHAIRMAN"),
+			professional.ListExpiringCertifications,
+		)
+		cert.GET("/:id", professional.GetCertification)
+		cert.PUT("/:id",
+			mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"),
+			professional.UpdateCertification,
+		)
+		cert.DELETE("/:id",
+			mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"),
+			professional.DeleteCertification,
+		)
+	}
+
+	// ── Training courses — SPEC §13.10 ───────────────────────────────────────
+	tc := v1.Group("/hrm/training-courses", authMW)
+	{
+		tc.GET("", professional.ListTrainingCourses)
+		tc.POST("", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"), professional.CreateTrainingCourse)
+		tc.GET("/:id", professional.GetTrainingCourse)
+		tc.PUT("/:id", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"), professional.UpdateTrainingCourse)
+		tc.DELETE("/:id", mw.RequireRole("SUPER_ADMIN"), professional.DeleteTrainingCourse)
+	}
+
+	// ── Training records — SPEC §13.11 ───────────────────────────────────────
+	tr := v1.Group("/hrm/training-records", authMW)
+	{
+		tr.GET("/:id", professional.GetTrainingRecord)
+		tr.PUT("/:id", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"), professional.UpdateTrainingRecord)
+		tr.DELETE("/:id", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"), professional.DeleteTrainingRecord)
+	}
+
+	// Employee-scoped professional routes (under /hrm/employees/:id)
+	e.GET("/:id/certifications", professional.ListCertifications)
+	e.POST("/:id/certifications",
+		mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"),
+		professional.CreateCertification,
+	)
+	e.GET("/:id/training-records", professional.ListTrainingRecords)
+	e.POST("/:id/training-records",
+		mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"),
+		professional.CreateTrainingRecord,
+	)
+	e.GET("/:id/cpe-summary", professional.GetCPESummary)
+
+	// ── CPE requirements — SPEC §13.11 ───────────────────────────────────────
+	cpe := v1.Group("/hrm/cpe-requirements", authMW)
+	{
+		cpe.GET("", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER", "CEO", "CHAIRMAN"), professional.ListCPERequirements)
+		cpe.POST("", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"), professional.CreateCPERequirement)
+		cpe.PUT("/:id", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"), professional.UpdateCPERequirement)
 	}
 }
