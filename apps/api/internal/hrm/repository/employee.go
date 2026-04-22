@@ -755,3 +755,34 @@ func (r *ContractRepo) Terminate(ctx context.Context, id, employeeID uuid.UUID) 
 	}
 	return nil
 }
+
+// ListExpiringContracts returns current contracts whose end_date falls within the
+// next withinDays calendar days, enriched with the employee's user_id.
+func (r *ContractRepo) ListExpiringContracts(ctx context.Context, withinDays int) ([]domain.ContractExpiryAlert, error) {
+	now := time.Now()
+	cutoff := now.AddDate(0, 0, withinDays)
+	const q = `
+		SELECT ec.id, ec.employee_id, e.user_id, ec.end_date
+		FROM   employment_contracts ec
+		JOIN   employees e ON e.id = ec.employee_id AND e.is_deleted = false
+		WHERE  ec.is_current = true
+		  AND  ec.end_date IS NOT NULL
+		  AND  ec.end_date >= $1
+		  AND  ec.end_date <= $2
+		  AND  e.user_id IS NOT NULL
+		ORDER  BY ec.end_date ASC`
+	rows, err := r.pool.Query(ctx, q, now, cutoff)
+	if err != nil {
+		return nil, fmt.Errorf("contract.ListExpiringContracts: %w", err)
+	}
+	defer rows.Close()
+	var out []domain.ContractExpiryAlert
+	for rows.Next() {
+		var a domain.ContractExpiryAlert
+		if err := rows.Scan(&a.ContractID, &a.EmployeeID, &a.UserID, &a.EndDate); err != nil {
+			return nil, fmt.Errorf("contract.ListExpiringContracts scan: %w", err)
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}

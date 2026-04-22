@@ -249,6 +249,29 @@ func (repo *ProvisioningRepo) MarkExecuted(ctx context.Context, requestID, execu
 	return r, nil
 }
 
+// ListExpiredPending returns PENDING provisioning requests whose expires_at has
+// already passed. Used by the HRM daily reminder job to notify the requester.
+func (repo *ProvisioningRepo) ListExpiredPending(ctx context.Context) ([]domain.ProvisioningExpiredAlert, error) {
+	const q = `
+		SELECT id, employee_id, requested_by, expires_at
+		FROM   user_provisioning_requests
+		WHERE  status = 'PENDING' AND expires_at < now()`
+	rows, err := repo.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("ProvisioningRepo.ListExpiredPending: %w", err)
+	}
+	defer rows.Close()
+	var out []domain.ProvisioningExpiredAlert
+	for rows.Next() {
+		var a domain.ProvisioningExpiredAlert
+		if err := rows.Scan(&a.RequestID, &a.EmployeeID, &a.RequestedBy, &a.ExpiresAt); err != nil {
+			return nil, fmt.Errorf("ProvisioningRepo.ListExpiredPending scan: %w", err)
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
 // ─── OffboardingRepo ──────────────────────────────────────────────────────────
 
 type OffboardingRepo struct{ pool *pgxpool.Pool }

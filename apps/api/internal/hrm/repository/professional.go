@@ -156,6 +156,38 @@ func (r *CertRepo) ListExpiring(ctx context.Context, withinDays int) ([]*domain.
 	return out, rows.Err()
 }
 
+// ListExpiringAlerts returns active certs expiring within withinDays days, joined with
+// the owning employee to include user_id for push/inbox delivery.
+func (r *CertRepo) ListExpiringAlerts(ctx context.Context, withinDays int) ([]domain.CertExpiryAlert, error) {
+	now := time.Now()
+	cutoff := now.AddDate(0, 0, withinDays)
+	const q = `
+		SELECT c.id, c.employee_id, e.user_id, c.cert_name, c.expiry_date
+		FROM   certifications c
+		JOIN   employees e ON e.id = c.employee_id AND e.is_deleted = false
+		WHERE  c.is_deleted = false
+		  AND  c.status = 'ACTIVE'
+		  AND  c.expiry_date IS NOT NULL
+		  AND  c.expiry_date >= $1
+		  AND  c.expiry_date <= $2
+		  AND  e.user_id IS NOT NULL
+		ORDER  BY c.expiry_date ASC`
+	rows, err := r.pool.Query(ctx, q, now, cutoff)
+	if err != nil {
+		return nil, fmt.Errorf("CertRepo.ListExpiringAlerts: %w", err)
+	}
+	defer rows.Close()
+	var out []domain.CertExpiryAlert
+	for rows.Next() {
+		var a domain.CertExpiryAlert
+		if err := rows.Scan(&a.CertID, &a.EmployeeID, &a.UserID, &a.CertName, &a.ExpiryDate); err != nil {
+			return nil, fmt.Errorf("CertRepo.ListExpiringAlerts scan: %w", err)
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
 // ─── TrainingCourseRepo ───────────────────────────────────────────────────────
 
 type TrainingCourseRepo struct{ pool *pgxpool.Pool }
@@ -473,6 +505,55 @@ func (r *TrainingRecordRepo) GetCPESummary(ctx context.Context, employeeID uuid.
 		return nil, fmt.Errorf("TrainingRecordRepo.GetCPESummary: %w", err)
 	}
 	return &s, nil
+}
+
+// ListCPEDeficit returns employees who have a CPE requirement for year but have
+// earned fewer hours than required. Used by the HRM daily reminder job.
+func (r *TrainingRecordRepo) ListCPEDeficit(ctx context.Context, year int) ([]domain.CPEDeficitAlert, error) {
+	const q = `
+		WITH emp_roles AS (
+			SELECT e.id AS employee_id, e.user_id, ro.code AS role_code
+			FROM   employees  e
+			JOIN   users      u   ON u.id = e.user_id
+			JOIN   user_roles ur  ON ur.user_id = u.id
+			JOIN   roles      ro  ON ro.id = ur.role_id
+			WHERE  e.is_deleted = false AND e.user_id IS NOT NULL
+		),
+		req AS (
+			SELECT   er.employee_id, er.user_id, MAX(cpr.required_hours) AS required_hours
+			FROM     emp_roles er
+			JOIN     cpe_requirements_by_role cpr
+			         ON cpr.role_code = er.role_code AND cpr.year = $1
+			GROUP BY er.employee_id, er.user_id
+			HAVING   MAX(cpr.required_hours) > 0
+		),
+		earned AS (
+			SELECT   tr.employee_id, COALESCE(SUM(tr.cpe_hours_earned), 0) AS total_hours
+			FROM     training_records tr
+			WHERE    tr.is_deleted = false
+			  AND    tr.status = 'COMPLETED'
+			  AND    EXTRACT(YEAR FROM tr.completion_date) = $1
+			GROUP BY tr.employee_id
+		)
+		SELECT r.employee_id, r.user_id, r.required_hours, COALESCE(e.total_hours, 0) AS total_hours
+		FROM   req r
+		LEFT   JOIN earned e ON e.employee_id = r.employee_id
+		WHERE  COALESCE(e.total_hours, 0) < r.required_hours`
+
+	rows, err := r.pool.Query(ctx, q, year)
+	if err != nil {
+		return nil, fmt.Errorf("TrainingRecordRepo.ListCPEDeficit: %w", err)
+	}
+	defer rows.Close()
+	var out []domain.CPEDeficitAlert
+	for rows.Next() {
+		var a domain.CPEDeficitAlert
+		if err := rows.Scan(&a.EmployeeID, &a.UserID, &a.RequiredHours, &a.TotalHours); err != nil {
+			return nil, fmt.Errorf("TrainingRecordRepo.ListCPEDeficit scan: %w", err)
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
 }
 
 // ─── CPERequirementRepo ───────────────────────────────────────────────────────

@@ -28,6 +28,11 @@ import (
 	hrmhandler "github.com/mdh/erp-audit/api/internal/hrm/handler"
 	hrmrepo "github.com/mdh/erp-audit/api/internal/hrm/repository"
 	hrmusecase "github.com/mdh/erp-audit/api/internal/hrm/usecase"
+	hrmworker "github.com/mdh/erp-audit/api/internal/hrm/worker"
+
+	notifhandler "github.com/mdh/erp-audit/api/internal/notification/handler"
+	notifrepo "github.com/mdh/erp-audit/api/internal/notification/repository"
+	notifusecase "github.com/mdh/erp-audit/api/internal/notification/usecase"
 
 	orghandler "github.com/mdh/erp-audit/api/internal/org/handler"
 	orgrepo "github.com/mdh/erp-audit/api/internal/org/repository"
@@ -221,6 +226,16 @@ func main() {
 	hrmProfDevUC := hrmusecase.NewProfessionalUseCase(hrmCertRepo, hrmCourseRepo, hrmRecordRepo, hrmCPERepo, hrmEmpRepo, auditLogger)
 	hrmProfDevH := hrmhandler.NewProfessionalHandler(hrmProfDevUC)
 
+	// ── Notification module ───────────────────────────────────────────────────
+	notifRepo := notifrepo.New(db.Pool)
+	notifUC := notifusecase.New(notifRepo)
+	notifH := notifhandler.New(notifUC)
+
+	// ── HRM daily reminder use case ───────────────────────────────────────────
+	hrmReminderUC := hrmworker.NewHRMReminderUseCase(
+		notifRepo, hrmCertRepo, hrmRecordRepo, hrmConRepo, hrmProvRepo,
+	)
+
 	// ── Org module (branches & departments) ───────────────────────────────────
 	branchRepo := orgrepo.NewBranchRepo(db.Pool)
 	deptRepo := orgrepo.NewDeptRepo(db.Pool)
@@ -350,6 +365,8 @@ func main() {
 	workerSrv.Register(outbox.EventEngagementSettled, commworker.NewEngagementSettledHandler(commAccrualUC))
 	// Reporting MV nightly refresh job
 	workerSrv.Register(reportingworker.TaskRefreshMVs, reportingworker.NewMVRefreshHandler(repReportUC))
+	// HRM daily reminder job
+	workerSrv.Register(hrmworker.TaskHRMReminder, hrmworker.NewHRMReminderHandler(hrmReminderUC))
 
 	// ── Router ────────────────────────────────────────────────────────────────
 	if cfg.App.Env == "production" {
@@ -393,6 +410,7 @@ func main() {
 	commhandler.RegisterRoutes(v1, commPlanH, commECH, commRecordH, authMW)
 	taxhandler.RegisterRoutes(v1, taxDeadlineH, taxAdvisoryH, taxComplianceH, authMW)
 	reportinghandler.RegisterRoutes(v1, repDashH, repReportH, authMW)
+	notifhandler.RegisterRoutes(v1, notifH, authMW)
 	ws.RegisterRoutes(v1, wsH) // GET /api/v1/events/stream — public upgrade, auth via ?token=
 
 	// ── HTTP server ───────────────────────────────────────────────────────────
@@ -410,6 +428,17 @@ func main() {
 	// ── Start background services ─────────────────────────────────────────────
 	bgCtx, bgCancel := context.WithCancel(context.Background())
 	defer bgCancel()
+
+	// ── Asynq daily scheduler (HRM reminders + future periodic jobs) ─────────
+	dailyScheduler := asynq.NewScheduler(asynqRedisOpt, nil)
+	if _, err := dailyScheduler.Register("@daily", asynq.NewTask(hrmworker.TaskHRMReminder, nil)); err != nil {
+		l.Fatal("failed to register daily HRM reminder", logger.Error(err))
+	}
+	go func() {
+		if err := dailyScheduler.Run(); err != nil {
+			l.Info("scheduler stopped: " + err.Error())
+		}
+	}()
 
 	go outboxPoller.Run(bgCtx)
 	go func() {
@@ -429,6 +458,7 @@ func main() {
 	l.Info("shutting down server...")
 
 	bgCancel()
+	dailyScheduler.Shutdown()
 	workerSrv.Shutdown()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
