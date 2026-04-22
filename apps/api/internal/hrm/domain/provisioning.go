@@ -131,6 +131,14 @@ type ListOffboardingFilter struct {
 
 // ─── Repository interfaces ────────────────────────────────────────────────────
 
+// ProvisioningExpiredAlert is returned by ListExpiredPending for the HRM reminder job.
+type ProvisioningExpiredAlert struct {
+	RequestID   uuid.UUID
+	EmployeeID  uuid.UUID
+	RequestedBy uuid.UUID // notify the submitter
+	ExpiresAt   time.Time
+}
+
 // ProvisioningRepository defines data access for user_provisioning_requests.
 type ProvisioningRepository interface {
 	Create(ctx context.Context, p CreateProvisioningParams) (*ProvisioningRequest, error)
@@ -143,6 +151,9 @@ type ProvisioningRepository interface {
 	HRReject(ctx context.Context, p RejectParams) (*ProvisioningRequest, error)
 	Cancel(ctx context.Context, requestID, callerID uuid.UUID) (*ProvisioningRequest, error)
 	MarkExecuted(ctx context.Context, requestID, executorID uuid.UUID) (*ProvisioningRequest, error)
+	// ListExpiredPending returns PENDING requests whose expires_at has passed.
+	// Used by the HRM daily reminder job to notify the requester.
+	ListExpiredPending(ctx context.Context) ([]ProvisioningExpiredAlert, error)
 }
 
 // OffboardingRepository defines data access for offboarding_checklists.

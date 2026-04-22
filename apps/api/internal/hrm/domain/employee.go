@@ -344,6 +344,14 @@ type DependentRepository interface {
 	Delete(ctx context.Context, id, employeeID uuid.UUID) error
 }
 
+// ContractExpiryAlert is returned by ListExpiringContracts for the HRM reminder job.
+type ContractExpiryAlert struct {
+	ContractID uuid.UUID
+	EmployeeID uuid.UUID
+	UserID     uuid.UUID
+	EndDate    time.Time
+}
+
 type ContractRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*EmploymentContract, error)
 	ListByEmployeeID(ctx context.Context, employeeID uuid.UUID) ([]*EmploymentContract, error)
@@ -351,4 +359,7 @@ type ContractRepository interface {
 	Create(ctx context.Context, p CreateContractParams) (*EmploymentContract, error)
 	Update(ctx context.Context, p UpdateContractParams) (*EmploymentContract, error)
 	Terminate(ctx context.Context, id, employeeID uuid.UUID) error
+	// ListExpiringContracts returns current contracts ending within withinDays days,
+	// enriched with the employee's user_id. Used by the HRM daily reminder job.
+	ListExpiringContracts(ctx context.Context, withinDays int) ([]ContractExpiryAlert, error)
 }

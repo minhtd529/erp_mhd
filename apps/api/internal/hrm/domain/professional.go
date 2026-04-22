@@ -194,6 +194,23 @@ type UpdateCPERequirementParams struct {
 
 // ─── Repository interfaces ─────────────────────────────────────────────────────
 
+// CertExpiryAlert is returned by ListExpiringAlerts for the HRM reminder job.
+type CertExpiryAlert struct {
+	CertID     uuid.UUID
+	EmployeeID uuid.UUID
+	UserID     uuid.UUID
+	CertName   string
+	ExpiryDate time.Time
+}
+
+// CPEDeficitAlert is returned by ListCPEDeficit for the HRM reminder job.
+type CPEDeficitAlert struct {
+	EmployeeID    uuid.UUID
+	UserID        uuid.UUID
+	RequiredHours float64
+	TotalHours    float64
+}
+
 type CertificationRepository interface {
 	Create(ctx context.Context, p CreateCertificationParams) (*Certification, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*Certification, error)
@@ -201,6 +218,9 @@ type CertificationRepository interface {
 	Update(ctx context.Context, p UpdateCertificationParams) (*Certification, error)
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	ListExpiring(ctx context.Context, withinDays int) ([]*Certification, error)
+	// ListExpiringAlerts returns active certs expiring within withinDays days,
+	// enriched with the employee's user_id for notification delivery.
+	ListExpiringAlerts(ctx context.Context, withinDays int) ([]CertExpiryAlert, error)
 }
 
 type TrainingCourseRepository interface {
@@ -218,6 +238,9 @@ type TrainingRecordRepository interface {
 	Update(ctx context.Context, p UpdateTrainingRecordParams) (*TrainingRecord, error)
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	GetCPESummary(ctx context.Context, employeeID uuid.UUID, year int) (*CPESummary, error)
+	// ListCPEDeficit returns employees who have CPE requirements for year but have not
+	// yet met them. Used by the HRM daily reminder job.
+	ListCPEDeficit(ctx context.Context, year int) ([]CPEDeficitAlert, error)
 }
 
 type CPERequirementRepository interface {
