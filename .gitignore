@@ -47,3 +47,16 @@ minio-data/
 
 # Temp
 tmp/
+
+# --- Local dev artifacts (added 2026-04-22) ---
+# Claude Code per-user settings
+.claude/settings.local.json
+
+# Go build temp artifacts
+*.exe~
+apps/api/server.exe
+apps/api/*.exe
+
+# DB backup files (local only, may contain sensitive data)
+backup_*.sql
+*.backup.sql
