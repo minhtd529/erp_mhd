@@ -101,6 +101,19 @@ export const MODULE_ROLES = {
   hrmOffboardingCreate:   [ROLES.HR_MANAGER],
   hrmOffboardingItems:    [ROLES.SUPER_ADMIN, ROLES.HR_MANAGER, ROLES.HR_STAFF, ROLES.ACCOUNTANT],
 
+  // HRM — certifications (§13.10)
+  hrmCertWrite:           [ROLES.SUPER_ADMIN, ROLES.HR_MANAGER],
+  hrmExpiringCert:        [ROLES.SUPER_ADMIN, ROLES.CHAIRMAN, ROLES.CEO, ROLES.HR_MANAGER],
+
+  // HRM — training courses catalog (§13.10)
+  hrmTrainingCourseRead:  [ROLES.SUPER_ADMIN, ROLES.CHAIRMAN, ROLES.CEO, ROLES.HR_MANAGER, ROLES.HR_STAFF],
+  hrmTrainingCourseWrite: [ROLES.SUPER_ADMIN, ROLES.HR_MANAGER],
+  hrmTrainingCourseDelete:[ROLES.SUPER_ADMIN],
+
+  // HRM — CPE requirements (§13.11)
+  hrmCPERead:             [ROLES.SUPER_ADMIN, ROLES.CHAIRMAN, ROLES.CEO, ROLES.HR_MANAGER],
+  hrmCPEWrite:            [ROLES.SUPER_ADMIN, ROLES.HR_MANAGER],
+
   // Reports
   reports:          [ROLES.SUPER_ADMIN, ROLES.FIRM_PARTNER, ROLES.AUDIT_MANAGER, ROLES.CHAIRMAN, ROLES.CEO],
 } satisfies Record<string, Role[]>;

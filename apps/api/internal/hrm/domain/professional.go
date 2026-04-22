@@ -56,10 +56,13 @@ type TrainingCourse struct {
 }
 
 // TrainingRecord maps to the training_records table (SPEC §11.11).
+// CourseName and CourseType are populated only by ListByEmployee (JOIN).
 type TrainingRecord struct {
 	ID             uuid.UUID
 	EmployeeID     uuid.UUID
 	CourseID       uuid.UUID
+	CourseName     string     // enriched: tc.name
+	CourseType     string     // enriched: tc.course_type
 	CompletionDate *time.Time
 	CpeHoursEarned float64
 	CertificateURL *string

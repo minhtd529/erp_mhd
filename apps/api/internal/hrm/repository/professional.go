@@ -322,6 +322,17 @@ func scanRecord(row scanner) (*domain.TrainingRecord, error) {
 	return &r, err
 }
 
+// scanRecordEnriched scans the 12 record columns plus tc.name and tc.course_type appended by ListByEmployee.
+func scanRecordEnriched(row scanner) (*domain.TrainingRecord, error) {
+	var r domain.TrainingRecord
+	err := row.Scan(
+		&r.ID, &r.EmployeeID, &r.CourseID, &r.CompletionDate, &r.CpeHoursEarned,
+		&r.CertificateURL, &r.Status, &r.Notes, &r.IsDeleted, &r.CreatedBy, &r.CreatedAt, &r.UpdatedAt,
+		&r.CourseName, &r.CourseType,
+	)
+	return &r, err
+}
+
 func (r *TrainingRecordRepo) Create(ctx context.Context, p domain.CreateTrainingRecordParams) (*domain.TrainingRecord, error) {
 	const q = `
 		INSERT INTO training_records
@@ -355,9 +366,14 @@ func (r *TrainingRecordRepo) FindByID(ctx context.Context, id uuid.UUID) (*domai
 }
 
 func (r *TrainingRecordRepo) ListByEmployee(ctx context.Context, employeeID uuid.UUID) ([]*domain.TrainingRecord, error) {
-	q := `SELECT ` + recordCols + ` FROM training_records
-		WHERE employee_id=$1 AND is_deleted=false
-		ORDER BY created_at DESC`
+	const q = `
+		SELECT tr.id, tr.employee_id, tr.course_id, tr.completion_date, tr.cpe_hours_earned,
+		       tr.certificate_url, tr.status, tr.notes, tr.is_deleted, tr.created_by, tr.created_at, tr.updated_at,
+		       tc.name, tc.course_type
+		FROM   training_records tr
+		JOIN   training_courses tc ON tc.id = tr.course_id
+		WHERE  tr.employee_id = $1 AND tr.is_deleted = false
+		ORDER  BY tr.created_at DESC`
 	rows, err := r.pool.Query(ctx, q, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("TrainingRecordRepo.ListByEmployee: %w", err)
@@ -365,7 +381,7 @@ func (r *TrainingRecordRepo) ListByEmployee(ctx context.Context, employeeID uuid
 	defer rows.Close()
 	var out []*domain.TrainingRecord
 	for rows.Next() {
-		rec, err := scanRecord(rows)
+		rec, err := scanRecordEnriched(rows)
 		if err != nil {
 			return nil, fmt.Errorf("TrainingRecordRepo.ListByEmployee scan: %w", err)
 		}

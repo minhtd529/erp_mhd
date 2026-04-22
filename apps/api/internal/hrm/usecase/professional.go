@@ -67,6 +67,8 @@ type TrainingRecordResponse struct {
 	ID             uuid.UUID  `json:"id"`
 	EmployeeID     uuid.UUID  `json:"employee_id"`
 	CourseID       uuid.UUID  `json:"course_id"`
+	CourseName     string     `json:"course_name"`
+	CourseType     string     `json:"course_type"`
 	CompletionDate *string    `json:"completion_date,omitempty"`
 	CpeHoursEarned float64    `json:"cpe_hours_earned"`
 	CertificateURL *string    `json:"certificate_url,omitempty"`
@@ -242,6 +244,8 @@ func toRecordResponse(r *domain.TrainingRecord) TrainingRecordResponse {
 		ID:             r.ID,
 		EmployeeID:     r.EmployeeID,
 		CourseID:       r.CourseID,
+		CourseName:     r.CourseName,
+		CourseType:     r.CourseType,
 		CpeHoursEarned: r.CpeHoursEarned,
 		CertificateURL: r.CertificateURL,
 		Status:         r.Status,

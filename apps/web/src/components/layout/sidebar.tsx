@@ -10,7 +10,7 @@ import {
   DollarSign, FolderOpen, TrendingUp, BarChart3, Settings, LogOut,
   ShieldCheck, UserCog, GitBranch, ScrollText, Network, Landmark,
   Layers, Grid3x3, Share2, UserCircle, ChevronDown, ChevronRight,
-  UserPlus, ClipboardList,
+  UserPlus, ClipboardList, BookOpen, Award,
 } from 'lucide-react';
 
 interface NavItem {
@@ -157,6 +157,27 @@ const NAV_GROUPS: NavGroup[] = [
         href: '/admin/hrm/offboarding',
         icon: ClipboardList,
         roles: MODULE_ROLES.hrmOffboardingRead,
+      },
+    ],
+  },
+
+  // ── Nhân sự (HRM) — đào tạo & CPE ───────────────────────────────────
+  {
+    title: 'Đào tạo & CPE',
+    roles: MODULE_ROLES.hrmTrainingCourseRead,
+    defaultOpen: false,
+    items: [
+      {
+        label: 'Danh mục khóa học',
+        href: '/admin/hrm/training-courses',
+        icon: BookOpen,
+        roles: MODULE_ROLES.hrmTrainingCourseRead,
+      },
+      {
+        label: 'Yêu cầu CPE',
+        href: '/admin/hrm/cpe-requirements',
+        icon: Award,
+        roles: MODULE_ROLES.hrmCPERead,
       },
     ],
   },
