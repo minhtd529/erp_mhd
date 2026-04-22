@@ -11,6 +11,7 @@ export const ROLES = {
   HR_MANAGER: 'HR_MANAGER',
   HR_STAFF: 'HR_STAFF',
   HEAD_OF_BRANCH: 'HEAD_OF_BRANCH',
+  ACCOUNTANT: 'ACCOUNTANT',
   CLIENT_ADMIN: 'CLIENT_ADMIN',
   CLIENT_USER: 'CLIENT_USER',
 } as const;
@@ -87,6 +88,18 @@ export const MODULE_ROLES = {
   hrmSensitive:     [ROLES.SUPER_ADMIN, ROLES.CHAIRMAN, ROLES.CEO, ROLES.HR_MANAGER],
   hrmSalary:        [ROLES.SUPER_ADMIN, ROLES.CHAIRMAN, ROLES.CEO, ROLES.HR_MANAGER],
   hrmSalaryWrite:   [ROLES.SUPER_ADMIN, ROLES.CEO, ROLES.HR_MANAGER],
+
+  // HRM — provisioning (§13.12)
+  hrmProvisioningRead:    [ROLES.SUPER_ADMIN, ROLES.HR_MANAGER, ROLES.HEAD_OF_BRANCH],
+  hrmProvisioningCreate:  [ROLES.HR_MANAGER, ROLES.HEAD_OF_BRANCH, ROLES.CEO],
+  hrmProvisioningExecute: [ROLES.SUPER_ADMIN],
+  hrmProvisioningBranch:  [ROLES.HEAD_OF_BRANCH],
+  hrmProvisioningHR:      [ROLES.HR_MANAGER],
+
+  // HRM — offboarding (§13.13)
+  hrmOffboardingRead:     [ROLES.SUPER_ADMIN, ROLES.HR_MANAGER, ROLES.CEO],
+  hrmOffboardingCreate:   [ROLES.HR_MANAGER],
+  hrmOffboardingItems:    [ROLES.SUPER_ADMIN, ROLES.HR_MANAGER, ROLES.HR_STAFF, ROLES.ACCOUNTANT],
 
   // Reports
   reports:          [ROLES.SUPER_ADMIN, ROLES.FIRM_PARTNER, ROLES.AUDIT_MANAGER, ROLES.CHAIRMAN, ROLES.CEO],

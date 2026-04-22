@@ -10,6 +10,7 @@ import {
   DollarSign, FolderOpen, TrendingUp, BarChart3, Settings, LogOut,
   ShieldCheck, UserCog, GitBranch, ScrollText, Network, Landmark,
   Layers, Grid3x3, Share2, UserCircle, ChevronDown, ChevronRight,
+  UserPlus, ClipboardList,
 } from 'lucide-react';
 
 interface NavItem {
@@ -136,6 +137,27 @@ const NAV_GROUPS: NavGroup[] = [
     defaultOpen: true,
     items: [
       { label: 'Danh sách nhân viên', href: '/admin/hrm/employees', icon: Users },
+    ],
+  },
+
+  // ── Nhân sự (HRM) — provisioning & offboarding ───────────────────────
+  {
+    title: 'Cấp quyền & Offboarding',
+    roles: MODULE_ROLES.hrmProvisioningRead,
+    defaultOpen: true,
+    items: [
+      {
+        label: 'Cấp tài khoản',
+        href: '/admin/hrm/provisioning',
+        icon: UserPlus,
+        roles: MODULE_ROLES.hrmProvisioningRead,
+      },
+      {
+        label: 'Offboarding',
+        href: '/admin/hrm/offboarding',
+        icon: ClipboardList,
+        roles: MODULE_ROLES.hrmOffboardingRead,
+      },
     ],
   },
 
