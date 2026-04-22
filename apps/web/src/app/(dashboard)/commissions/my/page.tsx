@@ -9,7 +9,7 @@ import { PageSpinner } from '@/components/ui/spinner';
 import { Pagination } from '@/components/shared/pagination';
 import { commissionService, type RecordStatus } from '@/services/commissions';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { TrendingUp, Clock, DollarSign, PauseCircle } from 'lucide-react';
+import { TrendingUp, Clock, DollarSign, PauseCircle, type LucideIcon } from 'lucide-react';
 
 const STATUS_LABELS: Record<RecordStatus, string> = {
   accrued: 'Đã tích lũy', approved: 'Đã duyệt', paid: 'Đã chi', clawback: 'Hoàn lại',
@@ -18,7 +18,7 @@ const STATUS_VARIANTS: Record<RecordStatus, 'warning' | 'default' | 'success' | 
   accrued: 'warning', approved: 'default', paid: 'success', clawback: 'danger',
 };
 
-function SummaryCard({ title, value, icon: Icon, color }: { title: string; value: number; icon: React.ComponentType<{className?: string}>; color: string }) {
+function SummaryCard({ title, value, icon: Icon, color }: { title: string; value: number; icon: LucideIcon; color: string }) {
   return (
     <Card>
       <CardContent className="flex items-center gap-4 pt-5">
