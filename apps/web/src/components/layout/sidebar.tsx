@@ -37,12 +37,12 @@ const MODULE_NAVS: Record<Exclude<ModuleContext, null>, ModuleNav> = {
       { label: 'Yêu cầu CPE',       href: '/admin/hrm/cpe-requirements',         icon: Award,        roles: MODULE_ROLES.hrmCPERead },
       { label: 'Cấp quyền',         href: '/admin/hrm/provisioning',             icon: UserPlus,     roles: MODULE_ROLES.hrmProvisioningRead },
       { label: 'Offboarding',        href: '/admin/hrm/offboarding',              icon: ClipboardList, roles: MODULE_ROLES.hrmOffboardingRead },
-      { label: 'Hồ sơ của tôi',     href: '/my-profile',                         icon: UserCircle,   roles: ROLE_GROUPS.hr },
+      { label: 'Hồ sơ của tôi',     href: '/my-profile',                         icon: UserCircle },
     ],
   },
   audit: {
     items: [
-      { label: 'Tổng quan',         href: '/dashboard',       icon: LayoutDashboard, roles: [...ROLE_GROUPS.partner, ...ROLE_GROUPS.audit] },
+      { label: 'Tổng quan',         href: '/engagements',     icon: LayoutDashboard, roles: [...ROLE_GROUPS.partner, ...ROLE_GROUPS.audit] },
       { label: 'Hợp đồng',          href: '/engagements',     icon: Briefcase,       roles: MODULE_ROLES.engagements },
       { label: 'Hồ sơ kiểm toán',   href: '/working-papers',  icon: FolderOpen,      roles: MODULE_ROLES.workingPapers },
       { label: 'Chấm công',         href: '/timesheets',      icon: Clock,           roles: MODULE_ROLES.timesheets },
@@ -82,6 +82,16 @@ const MODULE_NAVS: Record<Exclude<ModuleContext, null>, ModuleNav> = {
       { label: 'Hợp đồng dịch vụ', href: '/engagements',      icon: Briefcase       },
       { label: 'Hóa đơn',          href: '/billing/invoices',  icon: FileText        },
       { label: 'Hồ sơ kiểm toán',  href: '/working-papers',   icon: FolderOpen      },
+    ],
+  },
+  executive: {
+    items: [
+      { label: 'Dashboard',      href: '/executive/dashboard',        icon: LayoutDashboard },
+      { label: 'Nhân sự',        href: '/admin/hrm/employees',        icon: Users           },
+      { label: 'Hợp đồng',       href: '/engagements',                icon: Briefcase       },
+      { label: 'Tài chính',      href: '/billing/invoices',           icon: DollarSign      },
+      { label: 'Báo cáo',        href: '/reports',                    icon: BarChart3       },
+      { label: 'Hồ sơ của tôi',  href: '/my-profile',                 icon: UserCircle      },
     ],
   },
 };

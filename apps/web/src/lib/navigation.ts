@@ -1,27 +1,29 @@
 import { ROLE_GROUPS, hasAnyRole } from './roles';
 
 export type ModuleContext =
-  | 'hrm' | 'audit' | 'finance' | 'crm' | 'reports' | 'system' | 'client'
+  | 'hrm' | 'audit' | 'finance' | 'crm' | 'reports' | 'system' | 'client' | 'executive'
   | null;
 
 export const MODULE_LABELS: Record<Exclude<ModuleContext, null>, string> = {
-  hrm:     'HRM',
-  audit:   'Kiểm toán',
-  finance: 'Tài chính',
-  crm:     'CRM',
-  reports: 'Báo cáo',
-  system:  'Hệ thống',
-  client:  'Dịch vụ',
+  hrm:       'HRM',
+  audit:     'Kiểm toán',
+  finance:   'Tài chính',
+  crm:       'CRM',
+  reports:   'Báo cáo',
+  system:    'Hệ thống',
+  client:    'Dịch vụ',
+  executive: 'Executive',
 };
 
 export const MODULE_HOME: Record<Exclude<ModuleContext, null>, string> = {
-  hrm:     '/hrm/dashboard',
-  audit:   '/engagements',
-  finance: '/billing/invoices',
-  crm:     '/clients',
-  reports: '/reports',
-  system:  '/admin/dashboard',
-  client:  '/client/portal',
+  hrm:       '/hrm/dashboard',
+  audit:     '/engagements',
+  finance:   '/billing/invoices',
+  crm:       '/clients',
+  reports:   '/reports',
+  system:    '/admin/dashboard',
+  client:    '/client/portal',
+  executive: '/executive/dashboard',
 };
 
 const AUDIT_PREFIXES = ['/engagements', '/working-papers', '/timesheets', '/commissions'];
@@ -29,6 +31,7 @@ const SYSTEM_PREFIXES = ['/users', '/branches', '/audit-logs', '/settings'];
 
 export function getModuleContext(pathname: string, userRoles: string[]): ModuleContext {
   if (pathname === '/') return null;
+  if (pathname.startsWith('/executive')) return 'executive';
   if (pathname.startsWith('/hrm') || pathname.startsWith('/admin/hrm')) return 'hrm';
   if (pathname.startsWith('/admin')) return 'system';
   if (AUDIT_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))) return 'audit';
@@ -40,11 +43,14 @@ export function getModuleContext(pathname: string, userRoles: string[]): ModuleC
   if (pathname.startsWith('/reports')) return 'reports';
   if (SYSTEM_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))) return 'system';
   if (pathname.startsWith('/my-profile')) {
-    return hasAnyRole(userRoles, ROLE_GROUPS.hr) ? 'hrm' : 'audit';
+    if (hasAnyRole(userRoles, ROLE_GROUPS.hr)) return 'hrm';
+    if (hasAnyRole(userRoles, ROLE_GROUPS.executive)) return 'executive';
+    return 'audit';
   }
   // /dashboard and other ambiguous paths — infer from role
   if (hasAnyRole(userRoles, ROLE_GROUPS.client)) return 'client';
   if (hasAnyRole(userRoles, ROLE_GROUPS.hr)) return 'hrm';
+  if (hasAnyRole(userRoles, ROLE_GROUPS.executive)) return 'executive';
   if (hasAnyRole(userRoles, [...ROLE_GROUPS.partner, ...ROLE_GROUPS.audit])) return 'audit';
   return 'system';
 }
@@ -62,6 +68,7 @@ const PAGE_LABELS: { prefix: string; label: string }[] = [
   { prefix: '/admin/hrm/cpe-requirements',          label: 'Yêu cầu CPE' },
   { prefix: '/admin/hrm/provisioning',              label: 'Cấp quyền' },
   { prefix: '/admin/hrm/offboarding',               label: 'Offboarding' },
+  { prefix: '/executive/dashboard',                  label: 'Dashboard' },
   { prefix: '/admin/dashboard',                     label: 'Dashboard' },
   { prefix: '/engagements',                         label: 'Hợp đồng' },
   { prefix: '/working-papers',                      label: 'Hồ sơ kiểm toán' },
