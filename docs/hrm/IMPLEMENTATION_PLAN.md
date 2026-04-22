@@ -1,6 +1,14 @@
 # HRM Implementation Plan
 ## ERP System — MDH Audit Firm
-**Version:** 1.0 | **Based on:** HRM_SPEC_v1.4.md | **Date:** 2026-04-21
+**Version:** 1.2 | **Based on:** HRM_SPEC_v1.4.md | **Date:** 2026-04-22
+
+> **Sprint 1 Status (2026-04-22):**
+> - Day 1–7 backend fully implemented and committed (migration 000020, 000021, all API endpoints)
+> - Phase 3 (Day 2 supplement): AES-256-GCM cipher (`pkg/crypto/aesgcm.go`) + sensitive PII endpoints (`GET/PUT /hrm/employees/:id/sensitive`) + salary history endpoints (`GET/POST /hrm/employees/:id/salary-history`) — committed `dac848f`
+> - Phase 4 (Day 8–10 equivalent): Full Employee UI implemented 2026-04-22 — see §Phase 4 Deviations below
+> - **Deviation from SPEC:** `salary_at_signing` on contracts is NUMERIC (plaintext), not encrypted — SPEC §11.9 shows TEXT for encryption but migration used NUMERIC. Encryption deferred to future migration.
+> - **Deviation from SPEC:** `so_bhxh_encrypted`, `mst_ca_nhan_encrypted` columns present; `bank_account_encrypted` uses separate `HRM_BANK_ENCRYPTION_KEY` (hex-encoded 32 bytes). PII columns (`cccd_encrypted`, `mst_ca_nhan_encrypted`, `so_bhxh_encrypted`) use `HRM_ENCRYPTION_KEY` (base64-encoded 32 bytes, AES-256-GCM).
+> - **Test result:** `go test ./pkg/crypto/... ./internal/hrm/...` — 14 crypto tests PASS, all employee/usecase tests PASS.
 
 > **Migration numbering note (2026-04-21):** SPEC v1.4 originally planned HRM migrations 000019–000026. After implementation started, migration 000019 was already occupied by `000019_working_papers`. All HRM migrations shifted +1: they now occupy 000020–000027. All references in this document have been updated accordingly.
 
@@ -170,16 +178,32 @@ Establish the organizational foundation and full employee record management. Aft
 
 ### Exit Criteria (Sprint 1 Complete)
 
-- [ ] Migrations 000020, 000021, 000027 (partial) pass lint + round-trip test
-- [ ] All 32 endpoints from scope respond correctly per role
-- [ ] POST /hrm/employees generates employee_code NV{YY}-{SEQ4} via trigger
-- [ ] PII fields (cccd_encrypted, mst_ca_nhan_encrypted, so_bhxh_encrypted, bank_account_encrypted) encrypted at rest, returned as `***` to unauthorized roles
-- [ ] GET /hrm/employees/:id/sensitive always writes EMPLOYEE_PII_ACCESSED to audit_logs
-- [ ] HoB HCM cannot see HO employees (branch scope enforced)
-- [ ] salary_history: INSERT works, UPDATE returns nothing (immutability rule), DELETE returns nothing
-- [ ] /admin/hrm/employees list renders, filters work, tabs load
-- [ ] /my-profile loads and limited-field edit works
-- [ ] `make lint test` passes (no compile errors, no test failures)
+- [x] Migrations 000020, 000021, 000027 (partial) pass lint + round-trip test — **DONE 2026-04-21**
+- [x] All 32 endpoints from scope respond correctly per role — **DONE 2026-04-21 (Day 2: 14 org endpoints; Day 5-7: employee CRUD, sensitive PII, salary history, dependents, contracts, profile)**
+- [x] POST /hrm/employees generates employee_code NV{YY}-{SEQ4} via trigger — **DONE (trigger fn_employees_set_code in 000021)**
+- [x] PII fields (cccd_encrypted, mst_ca_nhan_encrypted, so_bhxh_encrypted, bank_account_encrypted) encrypted at rest, returned as `***` to unauthorized roles — **DONE 2026-04-22 (pkg/crypto/aesgcm.go, usecase/sensitive.go)**
+- [x] GET /hrm/employees/:id/sensitive always writes EMPLOYEE_PII_ACCESSED to audit_logs — **DONE 2026-04-22 (fail-closed implementation)**
+- [x] HoB HCM cannot see HO employees (branch scope enforced) — **DONE (empScopeBranch in usecase/employee.go)**
+- [x] salary_history: INSERT works, UPDATE returns nothing (immutability rule), DELETE returns nothing — **DONE (PostgreSQL RULE no_update_salary_history + no_delete_salary_history)**
+- [x] /admin/hrm/employees list renders, filters work, tabs load — **DONE 2026-04-22 (Phase 4 frontend)**
+- [x] /my-profile loads and limited-field edit works — **DONE 2026-04-22 (Phase 4 frontend)**
+- [ ] `make lint test` passes (no compile errors, no test failures) — *pending full backend + frontend integration test run*
+
+### Phase 4 Frontend Implementation (2026-04-22)
+
+**Files created:**
+- `apps/web/src/services/hrm/employee.ts` — Full TypeScript service layer (all employee/profile/sensitive/salary/dependent/contract APIs)
+- `apps/web/src/app/(dashboard)/admin/hrm/employees/page.tsx` — Employee list with search, pagination, role-gated delete
+- `apps/web/src/app/(dashboard)/admin/hrm/employees/new/page.tsx` — Create employee form page
+- `apps/web/src/app/(dashboard)/admin/hrm/employees/[id]/page.tsx` — Employee detail with 4 tabs (Info, Dependents, Contracts, Salary History)
+- `apps/web/src/app/(dashboard)/my-profile/page.tsx` — Self-service profile page with limited-field edit
+- `apps/web/src/components/hrm/employee-form.tsx` — `CreateEmployeeForm` + `UpdateEmployeeForm` with react-hook-form + zod
+- `apps/web/src/components/hrm/sensitive-modal.tsx` — PII access confirmation dialog + decrypt view + update form
+- `apps/web/src/components/hrm/dependent-section.tsx` — Dependent CRUD with inline dialogs
+- `apps/web/src/components/hrm/contract-section.tsx` — Contract CRUD + terminate with dialogs
+- `apps/web/src/components/hrm/salary-history-section.tsx` — Immutable salary history with create form (write roles: SA, CEO, HR_MANAGER)
+
+**TypeScript check:** 0 errors in HRM files (`npx tsc --noEmit` — pre-existing errors in commissions/my/page.tsx unrelated to HRM work)
 
 ### Risk Items + Mitigations
 

@@ -12,6 +12,7 @@ import { authService } from '@/services/auth';
 import { useAuthStore } from '@/stores/auth';
 import { getErrorMessage } from '@/lib/utils';
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { getRoleLandingPage } from '@/lib/roles';
 
 const schema = z.object({
   email: z.string().email('Email không hợp lệ'),
@@ -43,7 +44,7 @@ export default function LoginPage() {
         setTokens(res.access_token, res.refresh_token);
         const me = await authService.me();
         setUser(me);
-        router.push('/dashboard');
+        router.push(getRoleLandingPage(me.roles ?? []));
       }
     } catch (err) {
       setError(getErrorMessage(err));

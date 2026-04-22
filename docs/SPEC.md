@@ -1,7 +1,7 @@
 # 📋 ERP SYSTEM — TECHNICAL SPECIFICATION DOCUMENT
 ## Hệ thống ERP cho Công ty Kiểm toán – Tư vấn Tài chính – Thuế
 
-**Version:** 1.4 (Updated: 2026-04-20 — Org bounded context (branches/departments), audit-logs read API, web UI pages)  
+**Version:** 1.5 (Updated: 2026-04-22 — Role-based navigation & routing: role groups, per-role landing pages, RoleGuard, grouped sidebar)  
 **Date:** 2026-04-12  
 **Author:** Senior Architect / PM  
 **Tech Stack:** Golang (Backend) · React / Next.js (Frontend) · PostgreSQL (Database)
@@ -368,19 +368,21 @@ type TrustedDevice struct {
 
 ### 3.1.2 Predefined Roles (seed data)
 
-| Code | Name | Level | Mô tả |
+> **Implementation note (2026-04-22):** Role codes dưới đây là giá trị thực tế đang dùng trong codebase (`UPPER_SNAKE_CASE`). Các tên cũ (`chairman`, `partner`, `admin`…) ở phiên bản trước đã được chuẩn hóa.
+
+| Code | Name | Nhóm | Mô tả |
 |---|---|---|---|
-| `chairman` | Chủ tịch HĐTV | 1 | Full quyền hệ thống, phê duyệt cao nhất |
-| `partner` | Partner | 2 | Ký hợp đồng, phê duyệt báo cáo kiểm toán |
-| `director` | Tổng Giám đốc / Phó TGĐ | 2 | Phân công nhân sự, phê duyệt hợp đồng |
-| `branch_director` | Giám đốc Chi nhánh | 3 | Quản lý chi nhánh, phân công nhân sự chi nhánh |
-| `manager` | Trưởng phòng / Manager | 4 | Review hồ sơ, quản lý team |
-| `senior` | Senior Auditor | 5 | Thực hiện & kiểm tra hồ sơ |
-| `junior` | Junior Auditor | 6 | Thực hiện công việc |
-| `intern` | Thực tập sinh | 7 | Hỗ trợ, hạn chế quyền |
-| `accountant` | Kế toán | 5 | Billing, invoice, công nợ |
-| `admin` | System Admin | 1 | Quản trị hệ thống |
-| `hr` | Nhân sự | 5 | Quản lý hồ sơ nhân sự |
+| `SUPER_ADMIN` | System Admin | sys-admin | Quản trị hệ thống, toàn quyền |
+| `CHAIRMAN` | Chủ tịch HĐTV | executive | Full quyền hệ thống, phê duyệt cao nhất |
+| `CEO` | Tổng Giám đốc | executive | Phân công nhân sự, phê duyệt hợp đồng |
+| `FIRM_PARTNER` | Partner | partner | Ký hợp đồng, phê duyệt báo cáo kiểm toán, quản lý commission |
+| `AUDIT_MANAGER` | Audit Manager | audit | Review hồ sơ, quản lý team kiểm toán |
+| `AUDIT_STAFF` | Audit Staff | audit | Thực hiện công việc kiểm toán, chấm công |
+| `HR_MANAGER` | HR Manager | hr | Quản lý toàn bộ nhân sự, tổ chức, lương |
+| `HR_STAFF` | HR Staff | hr | Hỗ trợ quản lý hồ sơ nhân viên |
+| `HEAD_OF_BRANCH` | Trưởng Chi nhánh | hr | Quản lý nhân sự chi nhánh (branch-scoped) |
+| `CLIENT_ADMIN` | Client Admin | client | Quản trị tài khoản phía khách hàng |
+| `CLIENT_USER` | Client User | client | Xem thông tin dịch vụ của khách hàng |
 
 ### 3.1.3 Service Interface
 
@@ -543,6 +545,67 @@ function useTwoFactor(): UseTwoFactor;
   qrCode={setup?.qrCodeURL}
   backupCodes={setup?.backupCodes}
 />
+```
+
+### 3.1.6 Role-Based Navigation & Routing (Frontend)
+
+> **Implemented:** 2026-04-22 — `apps/web/src/lib/roles.ts`, `apps/web/src/components/layout/role-guard.tsx`
+
+#### Role Groups & Landing Pages
+
+Sau khi login thành công, hệ thống redirect về landing page tương ứng với role ưu tiên cao nhất của user (first-match):
+
+| Nhóm | Roles | Landing Page |
+|---|---|---|
+| `sys-admin` | `SUPER_ADMIN` | `/admin/dashboard` |
+| `executive` | `CHAIRMAN`, `CEO` | `/executive/dashboard` |
+| `hr` | `HR_MANAGER`, `HR_STAFF`, `HEAD_OF_BRANCH` | `/hrm/dashboard` |
+| `client` | `CLIENT_ADMIN`, `CLIENT_USER` | `/client/portal` |
+| `partner`/`audit` | `FIRM_PARTNER`, `AUDIT_MANAGER`, `AUDIT_STAFF` | `/dashboard` |
+
+**Hàm:** `getRoleLandingPage(userRoles: string[]): string` — export từ `src/lib/roles.ts`.
+
+#### RoleGuard Component
+
+`<RoleGuard allowedRoles={[...]}>` — đặt tại **layout.tsx** của mỗi section route. Nếu user không có role phù hợp, redirect về `getRoleLandingPage()` thay vì trang 403 chung.
+
+```
+(dashboard)/admin/layout.tsx     → guard: SUPER_ADMIN
+(dashboard)/executive/layout.tsx → guard: CHAIRMAN, CEO
+(dashboard)/hrm/layout.tsx       → guard: HR_MANAGER, HR_STAFF, HEAD_OF_BRANCH
+(dashboard)/client/layout.tsx    → guard: CLIENT_ADMIN, CLIENT_USER
+```
+
+Guard client-side (Next.js App Router `'use client'`). Các route không có layout guard riêng (e.g. `/dashboard`, `/engagements`) áp dụng filter inline tại component level.
+
+#### Sidebar — Grouped Navigation
+
+Sidebar phân nhóm navigation theo module, mỗi nhóm có thể thu gọn (collapsible). Chỉ render nhóm nếu user có ít nhất một role trong `group.roles`.
+
+| Nhóm sidebar | Roles thấy | Items |
+|---|---|---|
+| Quản trị hệ thống | `SUPER_ADMIN` | Admin dashboard, Users, Branches, Audit logs, Settings |
+| Tổng quan | `FIRM_PARTNER`, `AUDIT_MANAGER`, `AUDIT_STAFF` | Dashboard |
+| Tổng quan | `CHAIRMAN`, `CEO` | Executive dashboard |
+| Tổng quan | HR roles | HRM dashboard |
+| CRM | All internal roles + executive | Khách hàng |
+| Hợp đồng kiểm toán | `SUPER_ADMIN`, `FIRM_PARTNER`, `AUDIT_MANAGER`, `AUDIT_STAFF`, `CHAIRMAN`, `CEO` | Hợp đồng, Hồ sơ KT |
+| Công việc cá nhân | `FIRM_PARTNER`, audit roles | Chấm công, Hoa hồng, Hồ sơ của tôi |
+| Tài chính | `SUPER_ADMIN`, `FIRM_PARTNER`, `CHAIRMAN`, `CEO` | Hóa đơn, Thanh toán |
+| Tổ chức | `SUPER_ADMIN`, `CHAIRMAN`, `CEO`, `HR_MANAGER` | Chi nhánh, Phòng ban, Ma trận, Sơ đồ tổ chức |
+| Nhân viên | HR roles + `SUPER_ADMIN`, `CHAIRMAN`, `CEO`, `FIRM_PARTNER` | Danh sách nhân viên |
+| Báo cáo | `SUPER_ADMIN`, `FIRM_PARTNER`, `AUDIT_MANAGER`, `CHAIRMAN`, `CEO` | Báo cáo |
+| Dịch vụ | `CLIENT_ADMIN`, `CLIENT_USER` | Cổng thông tin, Hợp đồng, Hóa đơn, Hồ sơ KT |
+
+**File:** `apps/web/src/components/layout/sidebar.tsx` — dùng `NAV_GROUPS: NavGroup[]` với `group.roles` và `item.roles`.
+
+#### Module Access Constants
+
+Tập trung tại `apps/web/src/lib/roles.ts` — export `MODULE_ROLES` object. Các page **không** tự định nghĩa `WRITE_ROLES` local nữa mà import từ đây:
+
+```typescript
+import { MODULE_ROLES } from '@/lib/roles';
+const canWrite = hasAnyRole(user?.roles ?? [], MODULE_ROLES.hrmEmployeeWrite);
 ```
 
 ---
@@ -3618,8 +3681,15 @@ DELETE /api/v1/reports/scheduled/:id
 
 ## 11.6 Frontend Pages
 
+> **Role-based landing pages (added 2026-04-22):** Sau login, user được redirect về landing page tương ứng role — xem §3.1.6.
+
 ```
-/dashboard                          → MainDashboard (role-based rendering)
+# Landing pages theo role group
+/admin/dashboard                    → AdminDashboardPage      (SUPER_ADMIN)
+/executive/dashboard                → ExecutiveDashboardPage  (CHAIRMAN, CEO)
+/hrm/dashboard                      → HrmDashboardPage        (HR_MANAGER, HR_STAFF, HEAD_OF_BRANCH)
+/client/portal                      → ClientPortalPage        (CLIENT_ADMIN, CLIENT_USER)
+/dashboard                          → MainDashboard (role-based rendering — FIRM_PARTNER, AUDIT_MANAGER, AUDIT_STAFF)
 /reports                            → ReportCatalogPage
 /reports/revenue                    → RevenueReportPage (filters + chart + table)
 /reports/utilization                → UtilizationReportPage

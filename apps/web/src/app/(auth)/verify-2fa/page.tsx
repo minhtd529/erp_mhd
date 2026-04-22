@@ -9,6 +9,7 @@ import { authService } from '@/services/auth';
 import { useAuthStore } from '@/stores/auth';
 import { getErrorMessage } from '@/lib/utils';
 import { ShieldCheck } from 'lucide-react';
+import { getRoleLandingPage } from '@/lib/roles';
 
 export default function Verify2FAPage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function Verify2FAPage() {
         setTokens(res.access_token, res.refresh_token);
         const me = await authService.me();
         setUser(me);
-        router.push('/dashboard');
+        router.push(getRoleLandingPage(me.roles ?? []));
       }
     } catch (err) {
       setError(getErrorMessage(err));
