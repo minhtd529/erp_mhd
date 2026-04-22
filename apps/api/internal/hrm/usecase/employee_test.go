@@ -40,6 +40,9 @@ func (m *mockEmpRepo) SoftDelete(_ context.Context, _ uuid.UUID, _ *uuid.UUID) e
 func (m *mockEmpRepo) UpdateProfile(_ context.Context, _ domain.UpdateProfileParams) (*domain.Employee, error) {
 	return m.emp, m.err
 }
+func (m *mockEmpRepo) UpdateSensitiveFields(_ context.Context, _ domain.UpdateSensitiveParams) error {
+	return m.err
+}
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 

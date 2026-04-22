@@ -6,7 +6,7 @@ import (
 )
 
 // RegisterRoutes wires all HRM routes under /api/v1.
-// SPEC §13.1 — organization (14) + employees (15) + profile (2) = 31 endpoints total.
+// SPEC §13.1 — organization, employees, sensitive PII, salary history, profile.
 func RegisterRoutes(
 	v1 *gin.RouterGroup,
 	org *OrgHandler,
@@ -14,6 +14,8 @@ func RegisterRoutes(
 	dep *DependentHandler,
 	con *ContractHandler,
 	prof *ProfileHandler,
+	sens *SensitiveHandler,
+	sal *SalaryHistoryHandler,
 	authMW gin.HandlerFunc,
 ) {
 	// ── Organization ──────────────────────────────────────────────────────────
@@ -65,6 +67,27 @@ func RegisterRoutes(
 		e.POST("/:id/contracts", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"), con.CreateContract)
 		e.PUT("/:id/contracts/:cid", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"), con.UpdateContract)
 		e.POST("/:id/contracts/:cid/terminate", mw.RequireRole("SUPER_ADMIN", "HR_MANAGER"), con.TerminateContract)
+
+		// Sensitive PII — SPEC §13.2: HR_MANAGER, CEO, CHAIRMAN, SUPER_ADMIN only
+		e.GET("/:id/sensitive",
+			mw.RequireRole("SUPER_ADMIN", "CHAIRMAN", "CEO", "HR_MANAGER"),
+			sens.GetSensitive,
+		)
+		e.PUT("/:id/sensitive",
+			mw.RequireRole("SUPER_ADMIN", "CHAIRMAN", "CEO", "HR_MANAGER"),
+			sens.UpdateSensitive,
+		)
+
+		// Salary history — immutable (no PUT/DELETE per SPEC §13.15)
+		// GET: SA, CHAIRMAN, CEO, HR_MANAGER; POST: SA, CEO, HR_MANAGER (CHAIRMAN DENY)
+		e.GET("/:id/salary-history",
+			mw.RequireRole("SUPER_ADMIN", "CHAIRMAN", "CEO", "HR_MANAGER"),
+			sal.ListSalaryHistory,
+		)
+		e.POST("/:id/salary-history",
+			mw.RequireRole("SUPER_ADMIN", "CEO", "HR_MANAGER"),
+			sal.CreateSalaryHistory,
+		)
 	}
 
 	// ── My profile ────────────────────────────────────────────────────────────

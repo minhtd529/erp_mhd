@@ -334,12 +334,146 @@ func (r *EmployeeRepo) UpdateProfile(ctx context.Context, p domain.UpdateProfile
 	return e, nil
 }
 
+// UpdateSensitiveFields updates only the 4 encrypted PII columns plus related
+// non-encrypted metadata (issued dates, bank name, etc.).
+func (r *EmployeeRepo) UpdateSensitiveFields(ctx context.Context, p domain.UpdateSensitiveParams) error {
+	parts := []string{}
+	args := []any{}
+	idx := 1
+
+	appendStr := func(col string, v *string) {
+		if v != nil {
+			parts = append(parts, fmt.Sprintf("%s = $%d", col, idx))
+			args = append(args, *v)
+			idx++
+		}
+	}
+	appendTime := func(col string, v *time.Time) {
+		if v != nil {
+			parts = append(parts, fmt.Sprintf("%s = $%d", col, idx))
+			args = append(args, *v)
+			idx++
+		}
+	}
+
+	appendStr("cccd_encrypted", p.CccdEncrypted)
+	appendTime("cccd_issued_date", p.CccdIssuedDate)
+	appendStr("cccd_issued_place", p.CccdIssuedPlace)
+	appendStr("passport_number", p.PassportNumber)
+	appendTime("passport_expiry", p.PassportExpiry)
+	appendStr("mst_ca_nhan_encrypted", p.MstCaNhanEncrypted)
+	appendStr("so_bhxh_encrypted", p.SoBhxhEncrypted)
+	appendStr("bank_account_encrypted", p.BankAccountEncrypted)
+	appendStr("bank_name", p.BankName)
+	appendStr("bank_branch", p.BankBranch)
+
+	if len(parts) == 0 {
+		return nil
+	}
+
+	parts = append(parts,
+		fmt.Sprintf("updated_at = $%d", idx),
+		fmt.Sprintf("updated_by = $%d", idx+1),
+	)
+	args = append(args, time.Now(), p.UpdatedBy, p.ID)
+	idx += 2
+
+	q := `UPDATE employees SET ` + strings.Join(parts, ", ") +
+		fmt.Sprintf(` WHERE id = $%d AND is_deleted = false`, idx)
+
+	tag, err := r.pool.Exec(ctx, q, args...)
+	if err != nil {
+		return fmt.Errorf("employee.UpdateSensitiveFields: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrEmployeeNotFound
+	}
+	return nil
+}
+
 func isEmpUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		return pgErr.Code == "23505"
 	}
 	return false
+}
+
+// ─── SalaryHistoryRepo ────────────────────────────────────────────────────────
+
+type SalaryHistoryRepo struct{ pool *pgxpool.Pool }
+
+func NewSalaryHistoryRepo(pool *pgxpool.Pool) *SalaryHistoryRepo {
+	return &SalaryHistoryRepo{pool: pool}
+}
+
+const salaryHistoryCols = `
+	sh.id, sh.employee_id, sh.effective_date, sh.base_salary,
+	sh.allowances_total, sh.salary_note, sh.change_type,
+	sh.approved_by, sh.created_by, sh.created_at,
+	u.full_name `
+
+func scanSalaryHistory(row scanner) (*domain.SalaryHistory, error) {
+	var h domain.SalaryHistory
+	err := row.Scan(
+		&h.ID, &h.EmployeeID, &h.EffectiveDate, &h.BaseSalary,
+		&h.AllowancesTotal, &h.SalaryNote, &h.ChangeType,
+		&h.ApprovedBy, &h.CreatedBy, &h.CreatedAt,
+		&h.CreatedByName,
+	)
+	return &h, err
+}
+
+func (r *SalaryHistoryRepo) ListByEmployeeID(ctx context.Context, employeeID uuid.UUID) ([]*domain.SalaryHistory, error) {
+	q := `SELECT ` + salaryHistoryCols +
+		`FROM employee_salary_history sh
+		 LEFT JOIN users u ON u.id = sh.created_by
+		 WHERE sh.employee_id = $1
+		 ORDER BY sh.effective_date DESC, sh.created_at DESC`
+
+	rows, err := r.pool.Query(ctx, q, employeeID)
+	if err != nil {
+		return nil, fmt.Errorf("salaryHistory.List: %w", err)
+	}
+	defer rows.Close()
+
+	var items []*domain.SalaryHistory
+	for rows.Next() {
+		h, err := scanSalaryHistory(rows)
+		if err != nil {
+			return nil, fmt.Errorf("salaryHistory.List scan: %w", err)
+		}
+		items = append(items, h)
+	}
+	if items == nil {
+		items = []*domain.SalaryHistory{}
+	}
+	return items, nil
+}
+
+func (r *SalaryHistoryRepo) Create(ctx context.Context, p domain.CreateSalaryHistoryParams) (*domain.SalaryHistory, error) {
+	q := `INSERT INTO employee_salary_history
+		(employee_id, effective_date, base_salary, allowances_total, salary_note,
+		 change_type, approved_by, created_by)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+		RETURNING id, employee_id, effective_date, base_salary,
+		          allowances_total, salary_note, change_type,
+		          approved_by, created_by, created_at`
+
+	var h domain.SalaryHistory
+	err := r.pool.QueryRow(ctx, q,
+		p.EmployeeID, p.EffectiveDate, p.BaseSalary, p.AllowancesTotal, p.SalaryNote,
+		p.ChangeType, p.ApprovedBy, p.CreatedBy,
+	).Scan(
+		&h.ID, &h.EmployeeID, &h.EffectiveDate, &h.BaseSalary,
+		&h.AllowancesTotal, &h.SalaryNote, &h.ChangeType,
+		&h.ApprovedBy, &h.CreatedBy, &h.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("salaryHistory.Create: %w", err)
+	}
+	// CreatedByName not populated on insert (would need a second SELECT or JOIN)
+	return &h, nil
 }
 
 // ─── DependentRepo ────────────────────────────────────────────────────────────

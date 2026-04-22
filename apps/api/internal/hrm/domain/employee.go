@@ -275,6 +275,49 @@ type UpdateContractParams struct {
 	DocumentURL       *string
 }
 
+// UpdateSensitiveParams carries the encrypted field values to persist.
+type UpdateSensitiveParams struct {
+	ID                   uuid.UUID
+	CccdEncrypted        *string
+	CccdIssuedDate       *time.Time
+	CccdIssuedPlace      *string
+	PassportNumber       *string
+	PassportExpiry       *time.Time
+	MstCaNhanEncrypted   *string
+	SoBhxhEncrypted      *string
+	BankAccountEncrypted *string
+	BankName             *string
+	BankBranch           *string
+	UpdatedBy            *uuid.UUID
+}
+
+// SalaryHistory is one row from employee_salary_history.
+type SalaryHistory struct {
+	ID              uuid.UUID
+	EmployeeID      uuid.UUID
+	EffectiveDate   time.Time
+	BaseSalary      float64
+	AllowancesTotal float64
+	SalaryNote      *string
+	ChangeType      string
+	ApprovedBy      *uuid.UUID
+	CreatedBy       *uuid.UUID
+	CreatedByName   *string // populated via JOIN with users
+	CreatedAt       time.Time
+}
+
+// CreateSalaryHistoryParams carries validated inputs for a new salary record.
+type CreateSalaryHistoryParams struct {
+	EmployeeID      uuid.UUID
+	EffectiveDate   time.Time
+	BaseSalary      float64
+	AllowancesTotal float64
+	SalaryNote      *string
+	ChangeType      string
+	ApprovedBy      *uuid.UUID
+	CreatedBy       *uuid.UUID
+}
+
 // ─── Repository interfaces ────────────────────────────────────────────────────
 
 type EmployeeRepository interface {
@@ -285,6 +328,12 @@ type EmployeeRepository interface {
 	Update(ctx context.Context, p UpdateEmployeeParams) (*Employee, error)
 	SoftDelete(ctx context.Context, id uuid.UUID, deletedBy *uuid.UUID) error
 	UpdateProfile(ctx context.Context, p UpdateProfileParams) (*Employee, error)
+	UpdateSensitiveFields(ctx context.Context, p UpdateSensitiveParams) error
+}
+
+type SalaryHistoryRepository interface {
+	ListByEmployeeID(ctx context.Context, employeeID uuid.UUID) ([]*SalaryHistory, error)
+	Create(ctx context.Context, p CreateSalaryHistoryParams) (*SalaryHistory, error)
 }
 
 type DependentRepository interface {

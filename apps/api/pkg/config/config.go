@@ -47,6 +47,7 @@ type JWTConfig struct {
 
 type HRMConfig struct {
 	BankEncryptionKey string `mapstructure:"HRM_BANK_ENCRYPTION_KEY"` // 64-char hex = 32 raw bytes
+	EncryptionKey     string `mapstructure:"HRM_ENCRYPTION_KEY"`      // base64-encoded 32 bytes for AES-256-GCM PII encryption
 }
 
 type TwoFAConfig struct {
@@ -81,6 +82,8 @@ func Load() (*Config, error) {
 
 	// HRM bank encryption key — must be overridden in production
 	v.SetDefault("HRM_BANK_ENCRYPTION_KEY", "0000000000000000000000000000000000000000000000000000000000000000")
+	// HRM PII encryption key (base64-encoded 32 bytes) — MUST be set in production
+	v.SetDefault("HRM_ENCRYPTION_KEY", "")
 
 	// 2FA defaults — TOTP_ENCRYPTION_KEY must be overridden in production
 	v.SetDefault("TOTP_ENCRYPTION_KEY", "0000000000000000000000000000000000000000000000000000000000000000")
@@ -135,6 +138,7 @@ func Load() (*Config, error) {
 	}
 	cfg.HRM = HRMConfig{
 		BankEncryptionKey: v.GetString("HRM_BANK_ENCRYPTION_KEY"),
+		EncryptionKey:     v.GetString("HRM_ENCRYPTION_KEY"),
 	}
 
 	return cfg, nil

@@ -69,6 +69,7 @@ import (
 	reportingusecase "github.com/mdh/erp-audit/api/internal/reporting/usecase"
 	reportingworker "github.com/mdh/erp-audit/api/internal/reporting/worker"
 
+	"github.com/mdh/erp-audit/api/pkg/crypto"
 	"github.com/mdh/erp-audit/api/pkg/distlock"
 	"github.com/mdh/erp-audit/api/pkg/metrics"
 	"github.com/mdh/erp-audit/api/pkg/outbox"
@@ -179,6 +180,13 @@ func main() {
 	contactUC := crmusecase.NewContactUseCase(contactRepo, auditLogger)
 	contactH := crmhandler.NewContactHandler(contactUC)
 
+	// ── HRM encryption — fail fast if key is missing or invalid ──────────────
+	hrmCipher, err := crypto.NewAESGCM(cfg.HRM.EncryptionKey)
+	if err != nil {
+		log.Fatalf("failed to init HRM encryption: %v", err)
+	}
+	log.Println("HRM encryption service initialized")
+
 	// ── HRM module ────────────────────────────────────────────────────────────
 	hrmOrgRepo := hrmrepo.NewOrgRepo(db.Pool)
 	hrmOrgUC := hrmusecase.NewOrgUseCase(hrmOrgRepo, auditLogger)
@@ -187,14 +195,19 @@ func main() {
 	hrmEmpRepo := hrmrepo.NewEmployeeRepo(db.Pool)
 	hrmDepRepo := hrmrepo.NewDependentRepo(db.Pool)
 	hrmConRepo := hrmrepo.NewContractRepo(db.Pool)
+	hrmSalRepo := hrmrepo.NewSalaryHistoryRepo(db.Pool)
 	hrmEmpUC := hrmusecase.NewEmployeeUseCase(hrmEmpRepo, auditLogger)
 	hrmDepUC := hrmusecase.NewDependentUseCase(hrmDepRepo, auditLogger)
 	hrmConUC := hrmusecase.NewContractUseCase(hrmConRepo, hrmEmpRepo, auditLogger)
 	hrmProfUC := hrmusecase.NewProfileUseCase(hrmEmpRepo, auditLogger)
+	hrmSensUC := hrmusecase.NewSensitiveUseCase(hrmEmpRepo, hrmCipher, auditLogger)
+	hrmSalUC := hrmusecase.NewSalaryHistoryUseCase(hrmSalRepo, hrmEmpRepo, auditLogger)
 	hrmEmpH := hrmhandler.NewEmployeeHandler(hrmEmpUC)
 	hrmDepH := hrmhandler.NewDependentHandler(hrmDepUC)
 	hrmConH := hrmhandler.NewContractHandler(hrmConUC)
 	hrmProfH := hrmhandler.NewProfileHandler(hrmProfUC)
+	hrmSensH := hrmhandler.NewSensitiveHandler(hrmSensUC)
+	hrmSalH := hrmhandler.NewSalaryHistoryHandler(hrmSalUC)
 
 	// ── Org module (branches & departments) ───────────────────────────────────
 	branchRepo := orgrepo.NewBranchRepo(db.Pool)
@@ -359,7 +372,7 @@ func main() {
 	v1.Use(require2FA)
 	authhandler.RegisterRoutes(v1, authH, userH, twoFAH, pushH, auditH, authMW)
 	crmhandler.RegisterRoutes(v1, clientH, contactH, authMW)
-	hrmhandler.RegisterRoutes(v1, hrmOrgH, hrmEmpH, hrmDepH, hrmConH, hrmProfH, authMW)
+	hrmhandler.RegisterRoutes(v1, hrmOrgH, hrmEmpH, hrmDepH, hrmConH, hrmProfH, hrmSensH, hrmSalH, authMW)
 	orghandler.RegisterRoutes(v1, branchH, deptH, authMW)
 	enghandler.RegisterRoutes(v1, engH, teamH, taskH, costH, authMW)
 	tshandler.RegisterRoutes(v1, tsH, entryH, attendanceH, authMW)
