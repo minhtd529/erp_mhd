@@ -14,6 +14,16 @@ import (
 	"github.com/mdh/erp-audit/api/internal/hrm/domain"
 )
 
+// pgCheckViolation maps PostgreSQL check_violation (23514) to domain.ErrValidation.
+// Returns nil for any other error so callers can use: if e := pgCheckViolation(err); e != nil { return nil, e }
+func pgCheckViolation(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23514" {
+		return fmt.Errorf("%w: %s", domain.ErrValidation, pgErr.ConstraintName)
+	}
+	return nil
+}
+
 // ─── CertRepo ─────────────────────────────────────────────────────────────────
 
 type CertRepo struct{ pool *pgxpool.Pool }
@@ -47,6 +57,9 @@ func (r *CertRepo) Create(ctx context.Context, p domain.CreateCertificationParam
 		p.IssuingAuthority, p.Status, p.DocumentURL, p.Notes, p.CreatedBy,
 	))
 	if err != nil {
+		if e := pgCheckViolation(err); e != nil {
+			return nil, e
+		}
 		return nil, fmt.Errorf("CertRepo.Create: %w", err)
 	}
 	return c, nil
@@ -101,6 +114,9 @@ func (r *CertRepo) Update(ctx context.Context, p domain.UpdateCertificationParam
 		return nil, domain.ErrCertificationNotFound
 	}
 	if err != nil {
+		if e := pgCheckViolation(err); e != nil {
+			return nil, e
+		}
 		return nil, fmt.Errorf("CertRepo.Update: %w", err)
 	}
 	return c, nil
@@ -175,6 +191,9 @@ func (r *TrainingCourseRepo) Create(ctx context.Context, p domain.CreateTraining
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return nil, domain.ErrDuplicateCourseCode
+		}
+		if e := pgCheckViolation(err); e != nil {
+			return nil, e
 		}
 		return nil, fmt.Errorf("TrainingCourseRepo.Create: %w", err)
 	}
@@ -263,6 +282,9 @@ func (r *TrainingCourseRepo) Update(ctx context.Context, p domain.UpdateTraining
 		return nil, domain.ErrTrainingCourseNotFound
 	}
 	if err != nil {
+		if e := pgCheckViolation(err); e != nil {
+			return nil, e
+		}
 		return nil, fmt.Errorf("TrainingCourseRepo.Update: %w", err)
 	}
 	return c, nil
@@ -312,6 +334,9 @@ func (r *TrainingRecordRepo) Create(ctx context.Context, p domain.CreateTraining
 		p.CertificateURL, p.Status, p.Notes, p.CreatedBy,
 	))
 	if err != nil {
+		if e := pgCheckViolation(err); e != nil {
+			return nil, e
+		}
 		return nil, fmt.Errorf("TrainingRecordRepo.Create: %w", err)
 	}
 	return rec, nil
@@ -363,6 +388,9 @@ func (r *TrainingRecordRepo) Update(ctx context.Context, p domain.UpdateTraining
 		return nil, domain.ErrTrainingRecordNotFound
 	}
 	if err != nil {
+		if e := pgCheckViolation(err); e != nil {
+			return nil, e
+		}
 		return nil, fmt.Errorf("TrainingRecordRepo.Update: %w", err)
 	}
 	return rec, nil
@@ -465,6 +493,9 @@ func (r *CPERequirementRepo) Create(ctx context.Context, p domain.CreateCPERequi
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return nil, domain.ErrDuplicateCPERequirement
 		}
+		if e := pgCheckViolation(err); e != nil {
+			return nil, e
+		}
 		return nil, fmt.Errorf("CPERequirementRepo.Create: %w", err)
 	}
 	return c, nil
@@ -527,6 +558,9 @@ func (r *CPERequirementRepo) Update(ctx context.Context, p domain.UpdateCPERequi
 		return nil, domain.ErrCPERequirementNotFound
 	}
 	if err != nil {
+		if e := pgCheckViolation(err); e != nil {
+			return nil, e
+		}
 		return nil, fmt.Errorf("CPERequirementRepo.Update: %w", err)
 	}
 	return c, nil

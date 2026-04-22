@@ -42,7 +42,7 @@ func (h *ProfessionalHandler) handleProfErr(c *gin.Context, err error) {
 	case errors.Is(err, domain.ErrEmployeeNotFound):
 		c.JSON(http.StatusNotFound, errResp("EMPLOYEE_NOT_FOUND", "Employee not found"))
 	case errors.Is(err, domain.ErrValidation):
-		c.JSON(http.StatusBadRequest, errResp("VALIDATION_ERROR", err.Error()))
+		c.JSON(http.StatusBadRequest, errResp("VALIDATION_ERROR", "Invalid value for one or more fields"))
 	default:
 		log.Printf("ERROR hrm.professional: %v", err)
 		c.JSON(http.StatusInternalServerError, errResp("INTERNAL_ERROR", "An internal error occurred"))
